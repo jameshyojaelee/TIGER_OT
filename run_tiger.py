@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""
+Cas13 Guide Design - Master Workflow
+=====================================
+Standalone, optimized pipeline for Cas13 guide RNA design.
+
+Usage:
+    python3 run_workflow.py targets.txt [options]
+    
+Examples:
+    python3 run_workflow.py targets.txt
+    python3 run_workflow.py targets.txt --top-n 5
+    python3 run_workflow.py targets.txt --config custom_config.yaml
+"""
+
+import sys
+import argparse
+from pathlib import Path
+
+# Add lib to path
+sys.path.insert(0, str(Path(__file__).parent / 'lib'))
+
+from workflows.master import Cas13WorkflowRunner
+from utils.logger import setup_logger
+from utils.config import load_config
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Cas13 Guide Design - Complete Workflow",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Basic usage
+  python3 run_workflow.py targets.txt
+  
+  # Advanced options
+  python3 run_workflow.py targets.txt --top-n 5 --skip-download
+  python3 run_workflow.py targets.txt --config custom.yaml --dry-run
+  
+  # Resume from specific step
+  python3 run_workflow.py targets.txt --resume-from offtarget
+        """
+    )
+    
+    # Required arguments
+    parser.add_argument(
+        'targets',
+        type=str,
+        help='Path to targets.txt file (gene names, one per line)'
+    )
+    
+    # Optional arguments
+    parser.add_argument(
+        '--output-dir', '-o',
+        type=str,
+        default='output',
+        help='Output directory (default: output/)'
+    )
+    
+    parser.add_argument(
+        '--config', '-c',
+        type=str,
+        default='config.yaml',
+        help='Configuration file (default: config.yaml)'
+    )
+    
+    parser.add_argument(
+        '--top-n',
+        type=int,
+        default=10,
+        help='Number of top guides per gene (default: 10)'
+    )
+    
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Preview workflow without executing'
+    )
+    
+    parser.add_argument(
+        '--skip-download',
+        action='store_true',
+        help='Skip FASTA download if files exist'
+    )
+    
+    parser.add_argument(
+        '--skip-validation',
+        action='store_true',
+        help='Skip validation steps (faster but not recommended)'
+    )
+    
+    parser.add_argument(
+        '--resume-from',
+        type=str,
+        choices=['download', 'tiger', 'offtarget', 'filter'],
+        help='Resume workflow from specific step'
+    )
+    
+    parser.add_argument(
+        '--threads',
+        type=int,
+        default=4,
+        help='Number of threads for parallel processing (default: 4)'
+    )
+    
+    parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        help='Verbose output'
+    )
+    
+    args = parser.parse_args()
+    
+    # Setup logger
+    logger = setup_logger(
+        'Cas13Workflow',
+        verbose=args.verbose,
+        log_file=f"{args.output_dir}/workflow.log"
+    )
+    
+    # Load configuration
+    main_dir = Path(__file__).parent
+    config = load_config(main_dir / args.config)
+    
+    # Update config with command-line arguments
+    config['top_n_guides'] = args.top_n
+    config['output_dir'] = args.output_dir
+    config['threads'] = args.threads
+    
+    # Initialize workflow runner
+    runner = Cas13WorkflowRunner(
+        targets_file=args.targets,
+        config=config,
+        main_dir=main_dir,
+        dry_run=args.dry_run,
+        logger=logger
+    )
+    
+    # Run workflow
+    try:
+        success = runner.run(
+            skip_download=args.skip_download,
+            skip_validation=args.skip_validation,
+            resume_from=args.resume_from
+        )
+        
+        if success:
+            logger.info("✅ Workflow completed successfully!")
+            logger.info(f"📄 Results: {args.output_dir}/final_guides.csv")
+            sys.exit(0)
+        else:
+            logger.error("❌ Workflow failed!")
+            sys.exit(1)
+            
+    except KeyboardInterrupt:
+        logger.warning("\n⚠️  Workflow interrupted by user")
+        logger.info("You can resume with: --resume-from <step>")
+        sys.exit(130)
+    except Exception as e:
+        logger.error(f"❌ Unexpected error: {e}", exc_info=True)
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()

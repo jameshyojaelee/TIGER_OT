@@ -1,0 +1,135 @@
+================================================================================
+WORKFLOW UPDATES - 2025-09-30
+================================================================================
+
+Two new features integrated from invivo_pilot/naive_ot:
+
+1. MM0 TOLERANCE PARAMETER
+2. MM0 LOCATION VALIDATION
+
+================================================================================
+
+1. MM0 TOLERANCE PARAMETER
+================================================================================
+
+WHAT IT DOES:
+- Provides flexible MM0 filtering instead of strict minimum
+- Allows guides with MM0 in range: [min_MM0, min_MM0 + tolerance]
+
+CONFIGURATION (config.yaml):
+  filtering:
+    mm0_tolerance: 3  # Default
+    
+OPTIONS:
+- 0:   Strictest (only minimum MM0 per gene)
+- 1-5: Moderate flexibility (recommended: 3)
+- 999: Ignore MM0 entirely (only use MM1=0, MM2=0)
+
+BENEFITS:
+- More guides per gene (more options)
+- Balances specificity with guide availability
+- Useful when minimum MM0 is high due to gene duplications
+
+EXAMPLE OUTPUT:
+  Nanog: MM0 range 1-4 (15 at min, 45 in range)
+  Sox2:  MM0 range 2-5 (8 at min, 28 in range)
+
+================================================================================
+
+2. MM0 LOCATION VALIDATION
+================================================================================
+
+WHAT IT DOES:
+- Analyzes where MM0 perfect matches are located
+- Determines if matches are in same gene (OK) vs different genes (concerning)
+- Provides detailed report of potential cross-gene off-targets
+
+CONFIGURATION (config.yaml):
+  output:
+    validate_mm0_locations: true  # Enable validation
+    
+OUTPUT FILE:
+  output/mm0_location_analysis.csv
+
+REPORT INCLUDES:
+- Per-guide breakdown of MM0 match locations
+- Summary statistics (same gene vs different genes)
+- List of most concerning guides (matches in other genes)
+- Transcript isoform details for each guide
+
+EXAMPLE SUMMARY:
+  Total guides analyzed: 110
+  Matches only in SAME gene (different isoforms): 95 (86.4%)
+  Matches in DIFFERENT genes (potential off-targets): 15 (13.6%)
+
+MOST CONCERNING GUIDES:
+  Gene       Score   MM0   Other Transcripts          Hits
+  Pnpla2     0.952   4     Gene1-201, Gene2-203      2
+  Sox2       0.943   3     Gene3-201                 1
+
+================================================================================
+
+OTHER UPDATES
+================================================================================
+
+UPDATED PARAMETERS:
+- min_guide_score: 0.70 → 0.80 (higher quality threshold)
+
+FILES MODIFIED:
+- config.yaml              - Added mm0_tolerance, validate_mm0_locations
+- workflows/master.py      - Updated _apply_adaptive_mm0(), added _step_validate_mm0()
+- lib/tiger/validation.py  - Added validation script (NEW)
+- WORKFLOW_GUIDE.md        - Updated documentation
+
+FILES CREATED:
+- lib/tiger/validation.py  - MM0 location analysis script
+- UPDATE_SUMMARY.txt       - This summary (NEW)
+
+================================================================================
+
+QUICK START
+================================================================================
+
+Run workflow as usual:
+
+  cd /gpfs/commons/groups/sanjana_lab/Cas13/TIGER
+  ./run_tiger_workflow.sh targets.txt
+
+Check results:
+  
+  # Main guides
+  head output/final_guides.csv
+  
+  # MM0 location analysis (if enabled)
+  head output/mm0_location_analysis.csv
+
+Adjust settings in config.yaml:
+
+  # For stricter filtering
+  mm0_tolerance: 0
+  min_guide_score: 0.85
+  
+  # For more flexibility
+  mm0_tolerance: 5
+  min_guide_score: 0.70
+  
+  # Disable MM0 validation (faster)
+  validate_mm0_locations: false
+
+================================================================================
+
+DOCUMENTATION
+================================================================================
+
+See WORKFLOW_GUIDE.md for complete documentation:
+- Configuration section
+- MM0 Tolerance Parameter
+- MM0 Location Validation (Optional)
+- Validation & Troubleshooting
+
+================================================================================
+
+Status: ✅ Ready to use
+Date: 2025-09-30
+
+================================================================================

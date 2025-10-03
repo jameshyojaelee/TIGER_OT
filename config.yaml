@@ -1,0 +1,60 @@
+# Cas13 Guide Design - Default Configuration
+# ==========================================
+
+# Project settings
+project_name: "cas13_guides"
+species: "mus_musculus"  # or "homo_sapiens"
+
+# TIGER settings
+tiger:
+  model_path: "models/tiger_model"
+  calibration_params: "models/calibration.pkl"
+  scoring_params: "models/scoring.pkl"
+  batch_size: 500
+  guide_length: 23
+  context_5p: 3
+  context_3p: 0
+
+# Off-target settings
+offtarget:
+  reference_transcriptome: "reference/gencode.vM37.transcripts.uc.joined"
+  max_mismatches: 5
+  binary_path: "bin/offtarget_search"
+  chunk_size: 1500  # Guides per SLURM job
+  
+# Filtering thresholds
+filtering:
+  top_n_guides: 10
+  min_guide_score: 0.80  # Minimum TIGER score (0.0-1.0). Increase for higher quality, decrease if genes have no passing guides
+  mm1_threshold: 0  # No 1-mismatch off-targets
+  mm2_threshold: 0  # No 2-mismatch off-targets
+  adaptive_mm0: true  # Use adaptive MM0 threshold per gene
+  mm0_tolerance: 3  # Allow guides with MM0 up to (min_MM0 + this value). Set to 0 for strictest filtering, 999 to ignore
+
+# SLURM settings
+slurm:
+  account: "sanjana"
+  partition: "cpu"
+  time: "02:00:00"
+  mem: "8G"
+  cpus_per_task: 1
+
+# Ensembl download settings  
+ensembl:
+  rest_url: "https://rest.ensembl.org"
+  prefer_canonical: true
+  prefer_appris_principal: true
+  rate_limit_delay: 0.5  # seconds between requests
+
+# Output settings
+output:
+  save_intermediate: true
+  compress_logs: false
+  generate_plots: true
+  validate_mm0_locations: true  # Analyze where MM0 matches are located (same gene vs different genes)
+
+# Computational settings
+compute:
+  threads: 4
+  memory_gb: 16
+  use_gpu: false

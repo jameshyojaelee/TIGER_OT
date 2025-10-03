@@ -1,0 +1,50 @@
+# Sample configuration for quick smoke tests with bundled reference
+species: "mus_musculus"
+
+# TIGER settings
+tiger:
+  model_path: "models/tiger_model"
+  calibration_params: "models/calibration.pkl"
+  scoring_params: "models/scoring.pkl"
+  batch_size: 128
+  guide_length: 23
+  context_5p: 3
+  context_3p: 0
+
+# Off-target settings
+# Uses the tiny bundled reference (2 transcripts) so the workflow can run anywhere.
+offtarget:
+  reference_transcriptome: "reference/sample_reference.fa"
+  max_mismatches: 3
+  binary_path: "bin/offtarget_search"
+  chunk_size: 500
+
+filtering:
+  top_n_guides: 3
+  min_guide_score: 0.40
+  mm1_threshold: 5
+  mm2_threshold: 5
+  adaptive_mm0: false
+  mm0_tolerance: 999
+
+output:
+  validate_mm0_locations: false
+
+# SLURM (unused in smoke test)
+slurm:
+  account: "sanjana"
+  partition: "cpu"
+  time: "00:05:00"
+  mem: "4G"
+  cpus_per_task: 1
+
+ensembl:
+  rest_url: "https://rest.ensembl.org"
+  prefer_canonical: true
+  prefer_appris_principal: true
+  rate_limit_delay: 0.5
+
+compute:
+  threads: 1
+  memory_gb: 4
+  use_gpu: false

@@ -1,0 +1,14 @@
+# Example targets file for Cas13 guide design
+# Add one gene name per line
+# Lines starting with # are comments
+
+# Pluripotency genes
+Nanog
+Pou5f1
+Sox2
+Klf4
+
+# Example: Uncomment to add more genes
+# Myc
+# Esrrb
+# Tbx3
