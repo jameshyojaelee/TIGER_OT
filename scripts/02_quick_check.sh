@@ -1,79 +1,86 @@
 #!/bin/bash
-# Quick setup verification script
+# 02_quick_check.sh -- fast post-setup sanity check
+set -euo pipefail
 
-echo "Checking Cas13 Workflow Setup..."
-echo "================================="
-echo ""
+ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+cd "$ROOT_DIR"
 
-# Check C binary
+cat <<'HDR'
+============================================================
+Cas13 TIGER Workflow · Step 02/04 — Quick Setup Check
+Runs lightweight checks after scripts/01_setup_workspace.sh.
+============================================================
+HDR
+
+status_ok=true
+
 if [ -x "bin/offtarget_search" ]; then
-    echo "✅ C binary: bin/offtarget_search"
+  echo "✅ C binary present: bin/offtarget_search"
 else
-    echo "❌ C binary not found or not executable"
-    echo "   Run: make"
+  echo "❌ Missing C binary. Run: make"
+  status_ok=false
 fi
 
-# Check Python modules
-python3 -c "
+python3 - <<'PY' || status_ok=false
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path('lib')))
-try:
-    from utils.logger import setup_logger
-    from utils.config import load_config
-    from download.ensembl import EnsemblDownloader
-    print('✅ Python modules import successfully')
-except ImportError as e:
-    print(f'❌ Python import error: {e}')
-    print('   Run: pip install --user -r requirements.txt')
-" 2>&1
+from utils.logger import setup_logger  # noqa: F401
+from utils.config import load_config  # noqa: F401
+from download.ensembl import EnsemblDownloader  # noqa: F401
+print('✅ Python module import test passed')
+PY
 
-# Check model
 if [ -d "models/tiger_model" ] || [ -L "models/tiger_model" ]; then
-    echo "✅ TIGER model: models/tiger_model"
+  echo "✅ Model directory found: models/tiger_model"
 else
-    echo "⚠️  TIGER model not found"
-    echo "   Run: ln -s /path/to/tiger_model models/tiger_model"
+  echo "⚠️  Model assets missing. Link your TIGER model into models/tiger_model"
+  status_ok=false
 fi
 
-# Check reference
 REF_LINK="reference/gencode.vM37.transcripts.uc.joined"
 if [ -f "$REF_LINK" ]; then
-    echo "✅ Reference: $REF_LINK"
+  echo "✅ Reference transcriptome present: $REF_LINK"
 elif [ -L "$REF_LINK" ]; then
-    TARGET=$(readlink "$REF_LINK")
-    if [ -e "$REF_LINK" ]; then
-        echo "✅ Reference symlink resolved: $REF_LINK -> $TARGET"
-    else
-        echo "⚠️  Reference symlink broken: $REF_LINK -> $TARGET"
-        echo "   Update the link or point config.yaml at a valid transcriptome."
-        echo "   For quick smoke tests you can use config.sample.yaml (bundled tiny reference)."
-    fi
+  TARGET=$(readlink "$REF_LINK")
+  if [ -e "$REF_LINK" ]; then
+    echo "✅ Reference symlink resolves: $REF_LINK -> $TARGET"
+  else
+    echo "⚠️  Reference symlink broken: $REF_LINK -> $TARGET"
+    status_ok=false
+  fi
 else
-    echo "⚠️  Reference transcriptome not found"
-    echo "   Provide the transcriptome and update config.yaml (offtarget.reference_transcriptome)."
-    echo "   For quick smoke tests you can use config.sample.yaml (bundled tiny reference)."
+  echo "⚠️  Reference transcriptome missing"
+  status_ok=false
 fi
 
-# Check TensorFlow
-python3 -c "
+python3 - <<'PY' || status_ok=false
 try:
     import tensorflow as tf
-    print(f'✅ TensorFlow: {tf.__version__}')
+    print('✅ TensorFlow available:', tf.__version__)
 except ImportError:
-    print('⚠️  TensorFlow not installed')
-    print('   Run: pip install --user tensorflow')
-" 2>&1
+    print('⚠️  TensorFlow not installed; ensure requirements are satisfied')
+    raise SystemExit(1)
+PY
 
-# Check targets file
 if [ -f "targets.txt" ]; then
-    n_targets=$(grep -v '^#' targets.txt | grep -v '^$' | wc -l)
-    echo "✅ Targets file: $n_targets genes"
+  n_targets=$(grep -v '^#' targets.txt | grep -v '^$' | wc -l)
+  echo "✅ targets.txt present with $n_targets entries"
 else
-    echo "⚠️  No targets.txt file"
-    echo "   Run: cp targets.example.txt targets.txt"
+  echo "ℹ️  targets.txt not found; copy targets.example.txt to get started"
 fi
 
 echo ""
-echo "Setup check complete!"
-echo "Run: ./run_tiger_workflow.sh --help"
+if [ "$status_ok" = true ]; then
+  cat <<'DONE'
+Quick check passed.
+Next: scripts/03_preflight_check.sh for the full diagnostics suite.
+DONE
+  exit 0
+else
+  cat <<'WARN'
+Quick check finished with warnings. Resolve the issues above before
+continuing to scripts/03_preflight_check.sh.
+WARN
+  exit 1
+fi

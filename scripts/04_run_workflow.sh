@@ -1,17 +1,19 @@
 #!/bin/bash
-# Simple entrypoint that configures the TIGER environment and launches the workflow.
+# 04_run_workflow.sh -- launch TIGER workflow with the environment wrapper
 set -euo pipefail
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+WRAPPER="${ROOT_DIR}/run_with_tiger_env.sh"
+DRIVER="${ROOT_DIR}/run_tiger.py"
 
 if [ "$#" -lt 1 ]; then
-  cat <<USAGE
-Usage: $(basename "$0") targets.txt [workflow options]
+  cat <<'USAGE'
+Usage: scripts/04_run_workflow.sh targets.txt [workflow options]
 
 Runs the Cas13 TIGER workflow with the provided targets file.
-Any additional arguments are forwarded to run_tiger.py.
+All additional arguments are forwarded to run_tiger.py -- use --help for details.
 USAGE
   exit 1
 fi
 
-exec "${SCRIPT_DIR}/run_with_tiger_env.sh" python3 "${SCRIPT_DIR}/run_tiger.py" "$@"
+exec "$WRAPPER" python3 "$DRIVER" "$@"

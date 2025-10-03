@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual Environment
+venv/
+venv_packages/
+env/
+ENV/
+
+# Output directories
+output/
+output_smoke/
+
+# Configuration files with potential sensitive data
+config.yaml
+
+# IDE/Editor
+.claude/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+workflow.log
+
+# Environment variables
+.env
+.env.local
+
+# Compiled binaries
+bin/offtarget_search
+
+# Reference data (large files)
+reference/*.fa
+reference/*.uc.joined
+
+# Test outputs
+test_targets.txt
+
+# Temporary files
+*.tmp
+*.bak
+.cache/

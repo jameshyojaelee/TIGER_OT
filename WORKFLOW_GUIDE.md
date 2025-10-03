@@ -42,7 +42,7 @@ Klf4
 EOF
 
 # Run the workflow (single-line launcher)
-./run_tiger_workflow.sh my_targets.txt
+scripts/04_run_workflow.sh my_targets.txt
 
 # Inspect results
 head output/final_guides.csv
@@ -64,7 +64,7 @@ head output/final_guides.csv
 For a quick verification that ships with the repo, use the tiny reference + sample config:
 
 ```bash
-./run_tiger_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
+scripts/04_run_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
 ```
 
 Results land in `output_smoke/final_guides.csv` and the run finishes in under a minute.
@@ -77,7 +77,7 @@ Results land in `output_smoke/final_guides.csv` and the run finishes in under a 
 Always launch the workflow through `run_tiger_workflow.sh`; it configures the TIGER environment (purges conflicting modules, loads `TensorFlow/2.15.1-base`, and sets CPU-only TensorFlow flags) before delegating to the Python driver.
 
 ```bash
-./run_tiger_workflow.sh targets.txt
+scripts/04_run_workflow.sh targets.txt
 ```
 
 Behind the scenes the launcher:
@@ -92,7 +92,7 @@ Behind the scenes the launcher:
 Need GPUs? export `TIGER_USE_GPU=1` (and, if required on your cluster, `TIGER_TF_GPU_MODULE` with the TensorFlow module that includes CUDA) before running:
 
 ```bash
-TIGER_USE_GPU=1 TIGER_TF_GPU_MODULE=TensorFlow/2.15.1-gpu ./run_tiger_workflow.sh targets.txt --threads 8
+TIGER_USE_GPU=1 TIGER_TF_GPU_MODULE=TensorFlow/2.15.1-gpu scripts/04_run_workflow.sh targets.txt --threads 8
 ```
 
 When `TIGER_USE_GPU` is unset, the wrapper forces CPU execution and suppresses the duplicate CUDA plugin warnings you may have noticed earlier.
@@ -144,28 +144,28 @@ Nanog,TGATCACACAGACAACCACCAGC,0.992,123,4,0,0,5,12,34
 ### Primary Entry Points
 ```bash
 # Show CLI options
-./run_tiger_workflow.sh --help
+scripts/04_run_workflow.sh --help
 
 # Dry run (prints plan, no execution)
-./run_tiger_workflow.sh targets.txt --dry-run
+scripts/04_run_workflow.sh targets.txt --dry-run
 
 # Main execution (default settings)
-./run_tiger_workflow.sh targets.txt
+scripts/04_run_workflow.sh targets.txt
 ```
 
 ### Common Variants
 ```bash
 # Request fewer guides per gene
-./run_tiger_workflow.sh my_targets.txt --top-n 5
+scripts/04_run_workflow.sh my_targets.txt --top-n 5
 
 # Custom configuration file
-./run_tiger_workflow.sh my_targets.txt --config alt_config.yaml
+scripts/04_run_workflow.sh my_targets.txt --config alt_config.yaml
 
 # Resume after resolving an issue
-./run_tiger_workflow.sh my_targets.txt --resume-from offtarget
+scripts/04_run_workflow.sh my_targets.txt --resume-from offtarget
 
 # Increase verbosity for debugging
-./run_tiger_workflow.sh my_targets.txt --verbose
+scripts/04_run_workflow.sh my_targets.txt --verbose
 ```
 
 ### Example End-to-End Session
@@ -177,7 +177,7 @@ Sox2
 EOF
 
 # Execute the workflow
-./run_tiger_workflow.sh test_targets.txt --verbose
+scripts/04_run_workflow.sh test_targets.txt --verbose
 
 # Inspect key artifacts
 cut -d',' -f1 output/final_guides.csv | tail -n +2 | sort | uniq -c
@@ -375,7 +375,7 @@ awk -F',' 'NR>1 {print $3}' output/final_guides.csv | sort -n | head -10
 - Resume from the last successful stage with `--resume-from`
 
 ### "Module not found" / TensorFlow complaints
-- Occurs when bypassing the launcher — re-run via `./run_tiger_workflow.sh ...`
+- Occurs when bypassing the launcher — re-run via `scripts/04_run_workflow.sh ...`
 
 ### "Gene has no guides with score ≥ 0.80"
 - Lower the threshold: `min_guide_score: 0.70`
@@ -392,7 +392,7 @@ awk -F',' 'NR>1 {print $3}' output/final_guides.csv | sort -n | head -10
 
 ### Need more visibility
 ```bash
-./run_tiger_workflow.sh targets.txt --verbose
+scripts/04_run_workflow.sh targets.txt --verbose
 less output/workflow.log
 ```
 
@@ -414,7 +414,7 @@ lib/
 ├── tiger/predictor.py   # Updated to call tiger_core
 models/
 └── tiger_model/         # SavedModel + calibration assets
-run_tiger_workflow.sh    # Single-line launcher (wraps the environment)
+scripts/04_run_workflow.sh    # Single-line launcher (wraps the environment)
 run_with_tiger_env.sh    # Environment wrapper (still available for advanced chaining)
 ```
 Workflow commands now rely solely on these bundled assets—no external TIGER checkout required.
@@ -449,7 +449,7 @@ Workflow commands now rely solely on these bundled assets—no external TIGER ch
 cat > test.txt <<'EOF'
 Nanog
 EOF
-./run_tiger_workflow.sh test.txt --output-dir test_out --verbose
+scripts/04_run_workflow.sh test.txt --output-dir test_out --verbose
 cat test_out/final_guides.csv
 ```
 
