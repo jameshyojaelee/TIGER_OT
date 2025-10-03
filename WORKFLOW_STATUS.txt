@@ -47,10 +47,10 @@ TO RUN THE WORKFLOW:
   EOT
   
   # Run workflow (single-line launcher wraps the environment)
-  ./run_tiger_workflow.sh my_targets.txt
+  scripts/04_run_workflow.sh my_targets.txt
   
   # Or use the bundled smoke test (tiny reference + sample config)
-  ./run_tiger_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
+  scripts/04_run_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
   
   # Check results
   head output/final_guides.csv
@@ -87,9 +87,9 @@ QUALITY GUARANTEES:
 
 KEY SCRIPTS:
 
-  run_tiger_workflow.sh  - Single-line launcher (recommended)
+  scripts/04_run_workflow.sh  - Single-line launcher (recommended)
   run_with_tiger_env.sh  - Environment wrapper (advanced)
-  preflight_check.sh     - Test all components
+  scripts/03_preflight_check.sh  - Test all components
   run_tiger.py           - Main workflow script
   config.yaml            - Configuration (edit settings here)
   reference/gencode.vM37.transcripts.uc.joined  - Bundled smoke-test transcriptome (replace for production)
@@ -108,22 +108,22 @@ DOCUMENTATION:
 QUICK COMMANDS:
 
   # Run workflow
-  ./run_tiger_workflow.sh targets.txt
+  scripts/04_run_workflow.sh targets.txt
   
   # Bundled smoke test
-  ./run_tiger_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
+  scripts/04_run_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
   
   # GPU run (set module as needed)
-  TIGER_USE_GPU=1 TIGER_TF_GPU_MODULE=TensorFlow/2.15.1-gpu ./run_tiger_workflow.sh targets.txt --threads 8
+  TIGER_USE_GPU=1 TIGER_TF_GPU_MODULE=TensorFlow/2.15.1-gpu scripts/04_run_workflow.sh targets.txt --threads 8
   
   # Dry run (preview)
-  ./run_tiger_workflow.sh targets.txt --dry-run
+  scripts/04_run_workflow.sh targets.txt --dry-run
   
   # Test system
-  ./preflight_check.sh
+  scripts/03_preflight_check.sh
   
   # View help
-  ./run_tiger_workflow.sh --help
+  scripts/04_run_workflow.sh --help
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -144,7 +144,7 @@ YOUR WORKFLOW IS READY! 🚀
 
 Next step: Run with your actual targets!
 
-  ./run_tiger_workflow.sh your_targets.txt
+  scripts/04_run_workflow.sh your_targets.txt
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

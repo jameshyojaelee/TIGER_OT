@@ -54,11 +54,17 @@ head output/final_guides.csv
 - Default selection: top 10 high-scoring guides per gene meeting MM criteria
 
 ### Success Checklist
-- [x] `./preflight_check.sh` reports 9/9 tests passing
+- [x] `scripts/03_preflight_check.sh` reports 9/9 tests passing
 - [x] Targets file prepared and reviewed
 - [x] `config.yaml` validated for this run
 - [x] Single-line launcher used for every run
 - [x] Optional dry run completed before large jobs
+
+### Fresh Install Order
+1. scripts/01_setup_workspace.sh
+2. scripts/02_quick_check.sh
+3. scripts/03_preflight_check.sh
+4. scripts/04_run_workflow.sh <targets>
 
 ### Smoke Test (Bundled)
 For a quick verification that ships with the repo, use the tiny reference + sample config:
@@ -74,7 +80,7 @@ Results land in `output_smoke/final_guides.csv` and the run finishes in under a 
 ## Environment & Setup
 
 ### Single-Line Launcher
-Always launch the workflow through `run_tiger_workflow.sh`; it configures the TIGER environment (purges conflicting modules, loads `TensorFlow/2.15.1-base`, and sets CPU-only TensorFlow flags) before delegating to the Python driver.
+Always launch the workflow through `scripts/04_run_workflow.sh` (legacy alias `./run_tiger_workflow.sh` remains available); it configures the TIGER environment (purges conflicting modules, loads `TensorFlow/2.15.1-base`, and sets CPU-only TensorFlow flags) before delegating to the Python driver.
 
 ```bash
 scripts/04_run_workflow.sh targets.txt
@@ -112,7 +118,7 @@ TensorFlow is provided via the module; Python packages are bundled locally to ke
 ### Health Checks
 Run the bundled diagnostics whenever the environment changes:
 ```bash
-./preflight_check.sh
+scripts/03_preflight_check.sh
 ```
 The script verifies executable permissions, Python availability, package imports, TIGER assets, configuration validity, and the off-target binary.
 
@@ -371,7 +377,7 @@ awk -F',' 'NR>1 {print $3}' output/final_guides.csv | sort -n | head -10
 
 ### Workflow stops early or logs errors
 - Inspect `output/workflow.log` for the failing step
-- Re-run diagnostics: `./preflight_check.sh`
+- Re-run diagnostics: `scripts/03_preflight_check.sh`
 - Resume from the last successful stage with `--resume-from`
 
 ### "Module not found" / TensorFlow complaints
@@ -456,7 +462,7 @@ cat test_out/final_guides.csv
 ---
 
 ## References & Support
-- **Logs & diagnostics**: `output/workflow.log`, `./preflight_check.sh`
+- **Logs & diagnostics**: `output/workflow.log`, `scripts/03_preflight_check.sh`
 - **Support commands**: `--help`, `--dry-run`, `--resume-from`, `--verbose`
 - **Scientific references**:
   - TIGER — Wesley et al., *Nat. Biotechnol.* (2024)

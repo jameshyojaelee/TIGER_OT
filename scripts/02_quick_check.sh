@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$ROOT_DIR"
+WRAPPER="${ROOT_DIR}/run_with_tiger_env.sh"
 
 cat <<'HDR'
 ============================================================
@@ -54,14 +55,20 @@ else
   status_ok=false
 fi
 
-python3 - <<'PY' || status_ok=false
-try:
-    import tensorflow as tf
-    print('✅ TensorFlow available:', tf.__version__)
-except ImportError:
-    print('⚠️  TensorFlow not installed; ensure requirements are satisfied')
-    raise SystemExit(1)
+if [ -x "$WRAPPER" ]; then
+  if "$WRAPPER" python3 - <<'PY' 2>/dev/null; then
+import tensorflow as tf
+print(tf.__version__)
 PY
+    echo "✅ TensorFlow available via run_with_tiger_env.sh"
+  else
+    echo "⚠️  TensorFlow not available via run_with_tiger_env.sh"
+    status_ok=false
+  fi
+else
+  echo "⚠️  Environment wrapper missing (run_with_tiger_env.sh)"
+  status_ok=false
+fi
 
 if [ -f "targets.txt" ]; then
   n_targets=$(grep -v '^#' targets.txt | grep -v '^$' | wc -l)

@@ -5,7 +5,7 @@
 # Default target
 all: bin/offtarget_search
 	@echo "✅ Build complete!"
-	@echo "Run: ./run_tiger_workflow.sh targets.txt"
+	@echo "Run: scripts/04_run_workflow.sh targets.txt"
 
 # Build C off-target search binary
 bin/offtarget_search: lib/offtarget/search.c

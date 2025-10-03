@@ -93,7 +93,7 @@ QUICK START
 Run workflow as usual:
 
   cd /gpfs/commons/groups/sanjana_lab/Cas13/TIGER
-  ./run_tiger_workflow.sh targets.txt
+  scripts/04_run_workflow.sh targets.txt
 
 Check results:
   
