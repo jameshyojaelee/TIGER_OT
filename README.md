@@ -49,9 +49,10 @@ head output_smoke/final_guides.csv
 ## Installation Notes
 
 - Requires Python 3.10+, GCC toolchain, and access to TensorFlow modules on the cluster.
-- `scripts/01_setup_workspace.sh` invokes `make` and `pip install -r requirements.txt` in the project root.
+- `scripts/01_setup_workspace.sh` skips `pip` when bundled dependencies under `venv_packages/` are present; set `TIGER_FORCE_PIP=1` to reinstall or `TIGER_SKIP_PIP=1` to skip explicitly (default). To pull TensorFlow via `pip`, export `TIGER_SKIP_TF_PIP=0`.
+- `scripts/01_setup_workspace.sh` still runs `make clean && make`; adjust the pip phase using the environment variables above depending on your cluster policy.
 - Provide TIGER model assets under `models/tiger_model/` (symlink or copy) and a reference transcriptome file referenced by `config.yaml` (`reference/gencode.vM37.transcripts.uc.joined` ships as a tiny smoke-test FASTA).
-- Optional conda workflow: run `scripts/01b_create_conda_env.sh` first, then activate the environment before running the other scripts.
+- Optional conda workflow: run `scripts/01b_create_conda_env.sh` first. If the solve is killed (common on shared login nodes), load a newer Anaconda module or skip conda and rely on the provided module wrapper instead.
 
 ## Usage
 

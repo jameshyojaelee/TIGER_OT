@@ -122,6 +122,13 @@ scripts/03_preflight_check.sh
 ```
 The script verifies executable permissions, Python availability, package imports, TIGER assets, configuration validity, and the off-target binary.
 
+> **Setup knobs**
+> - `TIGER_SKIP_PIP=1` — skip pip entirely (default when `venv_packages/` is present)
+> - `TIGER_FORCE_PIP=1` — force a fresh pip install
+> - `TIGER_SKIP_TF_PIP=0` — include TensorFlow/Keras in the pip install (defaults to using cluster modules)
+> - `TIGER_PIP_SCOPE=system` or `TIGER_PIP_TARGET=/path` — control installation scope
+> - `scripts/01b_create_conda_env.sh` is optional; if it gets killed, load a newer Anaconda/Miniconda module or simply skip conda and keep using the wrapper.
+
 ---
 
 ## Workflow Overview

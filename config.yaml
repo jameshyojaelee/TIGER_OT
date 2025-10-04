@@ -20,7 +20,7 @@ offtarget:
   reference_transcriptome: "reference/gencode.vM37.transcripts.uc.joined"
   max_mismatches: 5
   binary_path: "bin/offtarget_search"
-  chunk_size: 1500  # Guides per SLURM job
+  chunk_size: 1200  # Guides per batch (increase when running on high-memory nodes)
   
 # Filtering thresholds
 filtering:
@@ -35,9 +35,9 @@ filtering:
 slurm:
   account: "sanjana"
   partition: "cpu"
-  time: "02:00:00"
-  mem: "8G"
-  cpus_per_task: 1
+  time: "16:00:00"
+  mem: "200G"
+  cpus_per_task: 8
 
 # Ensembl download settings  
 ensembl:
@@ -55,6 +55,6 @@ output:
 
 # Computational settings
 compute:
-  threads: 4
-  memory_gb: 16
+  threads: 16
+  memory_gb: 200
   use_gpu: false

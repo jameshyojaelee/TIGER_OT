@@ -5,6 +5,11 @@ set -euo pipefail
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$ROOT_DIR"
 WRAPPER="${ROOT_DIR}/run_with_tiger_env.sh"
+if [ -x "$WRAPPER" ]; then
+  PY_CMD=("$WRAPPER" python3)
+else
+  PY_CMD=(python3)
+fi
 
 cat <<'HDR'
 ============================================================
@@ -22,7 +27,7 @@ else
   status_ok=false
 fi
 
-python3 - <<'PY' || status_ok=false
+if "${PY_CMD[@]}" - <<'PY'; then
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path('lib')))
@@ -31,6 +36,11 @@ from utils.config import load_config  # noqa: F401
 from download.ensembl import EnsemblDownloader  # noqa: F401
 print('✅ Python module import test passed')
 PY
+  :
+else
+  echo "❌ Python import test failed (see traceback above)"
+  status_ok=false
+fi
 
 if [ -d "models/tiger_model" ] || [ -L "models/tiger_model" ]; then
   echo "✅ Model directory found: models/tiger_model"
@@ -58,7 +68,7 @@ fi
 if [ -x "$WRAPPER" ]; then
   if "$WRAPPER" python3 - <<'PY' 2>/dev/null; then
 import tensorflow as tf
-print(tf.__version__)
+print('TensorFlow:', tf.__version__)
 PY
     echo "✅ TensorFlow available via run_with_tiger_env.sh"
   else

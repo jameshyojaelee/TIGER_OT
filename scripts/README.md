@@ -12,3 +12,9 @@ Optional helpers:
 - `scripts/01b_create_conda_env.sh` – provision an isolated conda environment.
 
 Legacy entrypoints (`setup.sh`, `preflight_check.sh`, `run_tiger_workflow.sh`, etc.) now point to these numbered scripts to keep older documentation working.
+
+Environment toggles for `scripts/01_setup_workspace.sh`:
+- `TIGER_SKIP_PIP=1` (default when `venv_packages/` exists) – skip installing packages with pip
+- `TIGER_FORCE_PIP=1` – force pip even if bundles exist
+- `TIGER_SKIP_TF_PIP=0` – include TensorFlow/Keras in the pip install
+- `TIGER_PIP_SCOPE=system` / `TIGER_PIP_TARGET=/path` – choose installation location

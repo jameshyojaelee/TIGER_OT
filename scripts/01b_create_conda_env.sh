@@ -37,7 +37,20 @@ fi
 cat <<MSG
 Creating conda environment '${ENV_NAME}' with Python 3.10 and dependencies...
 MSG
-conda create -n "$ENV_NAME" python=3.10 -y
+if ! conda create -n "$ENV_NAME" python=3.10 -y; then
+  cat <<'ERR'
+❌ Conda environment creation failed (process terminated).
+Common causes on shared clusters:
+  • Memory limits killing long-running conda solves
+  • Old conda executable lacking access to conda-forge metadata
+
+Workarounds:
+  1. Load a newer Anaconda/Miniconda module manually, then rerun this script.
+  2. Use mamba if available: TIGER_PIP_CMD="mamba" TIGER_SKIP_PIP=1 scripts/01_setup_workspace.sh
+  3. Skip conda entirely and rely on the provided module wrapper (default workflow path).
+ERR
+  exit 1
+fi
 
 # shellcheck disable=SC1091
 source "$(conda info --base)/etc/profile.d/conda.sh"

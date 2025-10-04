@@ -1,41 +1,45 @@
+project_name: cas13_guides
 species: mus_musculus
 tiger:
   model_path: models/tiger_model
   calibration_params: models/calibration.pkl
   scoring_params: models/scoring.pkl
-  batch_size: 128
+  batch_size: 500
   guide_length: 23
   context_5p: 3
   context_3p: 0
 offtarget:
-  reference_transcriptome: reference/sample_reference.fa
-  max_mismatches: 3
+  reference_transcriptome: reference/gencode.vM37.transcripts.uc.joined
+  max_mismatches: 5
   binary_path: bin/offtarget_search
-  chunk_size: 500
+  chunk_size: 1500
 filtering:
-  top_n_guides: 3
-  min_guide_score: 0.4
-  mm1_threshold: 5
-  mm2_threshold: 5
-  adaptive_mm0: false
-  mm0_tolerance: 999
-output:
-  validate_mm0_locations: false
+  top_n_guides: 10
+  min_guide_score: 0.8
+  mm1_threshold: 0
+  mm2_threshold: 0
+  adaptive_mm0: true
+  mm0_tolerance: 3
 slurm:
   account: sanjana
   partition: cpu
-  time: 00:05:00
-  mem: 4G
+  time: 02:00:00
+  mem: 8G
   cpus_per_task: 1
 ensembl:
   rest_url: https://rest.ensembl.org
   prefer_canonical: true
   prefer_appris_principal: true
   rate_limit_delay: 0.5
+output:
+  save_intermediate: true
+  compress_logs: false
+  generate_plots: true
+  validate_mm0_locations: true
 compute:
-  threads: 1
-  memory_gb: 4
+  threads: 4
+  memory_gb: 16
   use_gpu: false
 top_n_guides: 10
 output_dir: output_smoke
-threads: 1
+threads: 4

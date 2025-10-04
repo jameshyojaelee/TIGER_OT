@@ -4,6 +4,12 @@ set -euo pipefail
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$ROOT_DIR"
+WRAPPER="${ROOT_DIR}/run_with_tiger_env.sh"
+if [ -x "$WRAPPER" ]; then
+  PY_CMD=("$WRAPPER" python3)
+else
+  PY_CMD=(python3)
+fi
 
 cat <<'BANNER'
 ============================================================
@@ -23,9 +29,55 @@ else
 fi
 
 echo ""
-# Install Python dependencies via pip (system or virtualenv)
+# Install Python dependencies (skip when bundled packages already exist)
 echo "[2/4] Installing Python dependencies from requirements.txt"
-pip install -r requirements.txt
+
+FORCE_PIP=${TIGER_FORCE_PIP:-0}
+SKIP_PIP=${TIGER_SKIP_PIP:-0}
+SKIP_TF=${TIGER_SKIP_TF_PIP:-1}
+PIP_SCOPE=${TIGER_PIP_SCOPE:-user}
+PIP_TARGET=${TIGER_PIP_TARGET:-}
+
+if [ "$SKIP_PIP" = "1" ]; then
+  echo "ℹ️  Skipping pip install (TIGER_SKIP_PIP=1)."
+elif [ -d "venv_packages" ] && [ "$FORCE_PIP" != "1" ]; then
+  echo "ℹ️  Found bundled packages under venv_packages/; skipping pip install."
+  echo "    Set TIGER_FORCE_PIP=1 to force a reinstall."
+else
+  tmp_req=$(mktemp)
+  if [ "$SKIP_TF" = "1" ]; then
+    grep -Ev '^(tensorflow|tensorflow-cpu|keras)' requirements.txt > "$tmp_req"
+  else
+    cp requirements.txt "$tmp_req"
+  fi
+
+  if [ ! -s "$tmp_req" ]; then
+    echo "ℹ️  No packages to install after filtering requirements; skipping pip install."
+  else
+    if [ -n "${TIGER_PIP_CMD:-}" ]; then
+      read -r -a PIP_CMD <<<"${TIGER_PIP_CMD}"
+    else
+      PIP_CMD=(python3 -m pip)
+    fi
+
+    PIP_ARGS=(install --no-cache-dir --upgrade)
+    if [ -n "$PIP_TARGET" ]; then
+      PIP_ARGS+=(--target "$PIP_TARGET")
+    elif [ "$PIP_SCOPE" != "system" ]; then
+      PIP_ARGS+=(--user)
+    fi
+    PIP_ARGS+=(-r "$tmp_req")
+
+    echo "    Command: ${PIP_CMD[*]} ${PIP_ARGS[*]}"
+    if "${PIP_CMD[@]}" "${PIP_ARGS[@]}"; then
+      echo "✅ Python dependencies installed"
+    else
+      echo "⚠️  pip install failed."
+      echo "    If you are on the cluster, rely on modules + bundled venv_packages or re-run with TIGER_SKIP_PIP=1."
+    fi
+  fi
+  rm -f "$tmp_req"
+fi
 
 echo ""
 # Check for required model assets and hint if missing
@@ -67,18 +119,19 @@ Sox2
 EOF_TARGETS
 
 # Quick smoke import check (non-fatal)
-python3 - <<'PY'
+if "${PY_CMD[@]}" - <<'PY'; then
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path('lib')))
-try:
-    from utils.logger import setup_logger
-    from utils.config import load_config
-    print('✅ Python module import test passed')
-except ImportError as exc:
-    print(f'❌ Python import test failed: {exc}')
-    sys.exit(1)
+from utils.logger import setup_logger  # noqa: F401
+from utils.config import load_config  # noqa: F401
+print('✅ Python module import test passed')
 PY
+  :
+else
+  echo "❌ Python import test failed (see traceback above)"
+  exit 1
+fi
 
 cat <<'NEXT'
 ============================================================
