@@ -19,7 +19,7 @@ PRE-FLIGHT CHECK RESULTS:
   ✅ Test 6: Workflow Script (run_tiger.py loads)
   ✅ Test 7: Configuration File (configs/default.yaml valid)
   ✅ Test 8: Off-Target Binary (bin/offtarget_search)
-  ✅ Test 9: Reference Dataset (configs/default.yaml + transcriptome reachable)
+  ✅ Test 9: Reference Datasets (configs/default.yaml + transcriptomes reachable)
 
   Result: 9/9 PASSED ✅
 
@@ -47,10 +47,10 @@ TO RUN THE WORKFLOW:
   EOT
   
   # Run workflow (single-line launcher wraps the environment)
-  scripts/04_run_workflow.sh my_targets.txt
+  scripts/04_run_workflow.sh my_targets.txt --species mouse
   
   # Or use the bundled smoke test (tiny reference + sample config)
-  scripts/04_run_workflow.sh examples/targets/test_targets.txt --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
+  scripts/04_run_workflow.sh examples/targets/test_targets.txt --species mouse --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
   
   # Check results
   head runs/latest/final_guides.csv
@@ -87,12 +87,13 @@ QUALITY GUARANTEES:
 
 KEY SCRIPTS:
 
-  scripts/04_run_workflow.sh  - Single-line launcher (recommended)
+  scripts/04_run_workflow.sh --species {mouse,human}  - Single-line launcher (recommended)
   scripts/00_load_environment.sh  - Environment wrapper (advanced)
   scripts/03_preflight_check.sh  - Test all components
   run_tiger.py           - Main workflow script
   configs/default.yaml            - Configuration (edit settings here)
-  resources/reference/gencode.vM37.transcripts.uc.joined  - Bundled smoke-test transcriptome (replace for production)
+  resources/reference/gencode.vM37.transcripts.uc.joined  - Mouse transcriptome (replace for production runs)
+  resources/reference/gencode.v47.transcripts.fa         - Human transcriptome (copied automatically if available)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -108,16 +109,16 @@ DOCUMENTATION:
 QUICK COMMANDS:
 
   # Run workflow
-  scripts/04_run_workflow.sh targets.txt
+  scripts/04_run_workflow.sh targets.txt --species mouse
   
   # Bundled smoke test
-  scripts/04_run_workflow.sh examples/targets/test_targets.txt --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
+  scripts/04_run_workflow.sh examples/targets/test_targets.txt --species mouse --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
   
   # GPU run (set module as needed)
-  TIGER_USE_GPU=1 TIGER_TF_GPU_MODULE=TensorFlow/2.15.1-gpu scripts/04_run_workflow.sh targets.txt --threads 8
+  TIGER_USE_GPU=1 TIGER_TF_GPU_MODULE=TensorFlow/2.15.1-gpu scripts/04_run_workflow.sh targets.txt --species mouse --threads 8
   
   # Dry run (preview)
-  scripts/04_run_workflow.sh targets.txt --dry-run
+  scripts/04_run_workflow.sh targets.txt --species mouse --dry-run
   
   # Test system
   scripts/03_preflight_check.sh
@@ -129,6 +130,7 @@ QUICK COMMANDS:
 
 WHAT'S NEW TODAY (2025-09-30):
 
+  ✅ Species selector (`--species {mouse,human}`) routes Ensembl + transcriptomes automatically
   ✅ TIGER fully integrated (no external dependencies)
   ✅ MM0 >= 1 validation (excludes invalid guides)
   ✅ Score-first filtering (prioritizes high-quality guides)
@@ -144,7 +146,7 @@ YOUR WORKFLOW IS READY! 🚀
 
 Next step: Run with your actual targets!
 
-  scripts/04_run_workflow.sh your_targets.txt
+  scripts/04_run_workflow.sh your_targets.txt --species {mouse,human}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

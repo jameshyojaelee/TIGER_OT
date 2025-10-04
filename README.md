@@ -27,13 +27,13 @@ scripts/03_preflight_check.sh
 
 # 4. Prepare targets and launch
 cp examples/targets/example_targets.txt targets.txt  # edit to add your genes
-scripts/04_run_workflow.sh targets.txt
+scripts/04_run_workflow.sh targets.txt --species mouse
 ```
 
 ### Smoke Test (bundled)
 
 ```bash
-scripts/04_run_workflow.sh examples/targets/test_targets.txt --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
+scripts/04_run_workflow.sh examples/targets/test_targets.txt --species mouse --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
 head runs/smoke/final_guides.csv
 ```
 
@@ -62,16 +62,17 @@ head runs/smoke/final_guides.csv
 - Requires Python 3.10+, GCC toolchain, and access to TensorFlow modules on the cluster.
 - `scripts/01_setup_workspace.sh` skips `pip` when bundled dependencies under `vendor/venv_packages/` are present; set `TIGER_FORCE_PIP=1` to reinstall or `TIGER_SKIP_PIP=1` to skip explicitly (default). To pull TensorFlow via `pip`, export `TIGER_SKIP_TF_PIP=0`.
 - `scripts/01_setup_workspace.sh` still runs `make clean && make`; adjust the pip phase using the environment variables above depending on your cluster policy.
-- Provide TIGER model assets under `resources/models/tiger_model/` (symlink or copy) and a reference transcriptome file referenced by `configs/default.yaml` (`resources/reference/gencode.vM37.transcripts.uc.joined` ships as a tiny smoke-test FASTA).
+- Provide TIGER model assets under `resources/models/tiger_model/` (symlink or copy). For references, the setup script checks both mouse (`resources/reference/gencode.vM37.transcripts.uc.joined`) and human (`resources/reference/gencode.v47.transcripts.fa`). The human transcriptome is automatically copied from `/gpfs/commons/home/jameslee/reference_genome/refdata-gex-GRCh38-2024-A/genome/gencode.v47.transcripts.fa.gz` if present; otherwise, copy or symlink your lab's version.
 - Optional conda workflow: run `scripts/01b_create_conda_env.sh` first. If the solve is killed (common on shared login nodes), load a newer Anaconda module or skip conda and rely on the provided module wrapper instead.
 
 ## Usage
 
 ```bash
-scripts/04_run_workflow.sh targets.txt [--top-n 5 --config configs/custom.yaml --threads 8]
+scripts/04_run_workflow.sh targets.txt --species {mouse,human} [--top-n 5 --config configs/custom.yaml --threads 8]
 ```
 
 Common flags:
+- `--species {mouse,human}` – **required**; selects the organism (`mouse` → `mus_musculus`, `human` → `homo_sapiens`).
 - `--output-dir PATH` – change output location (default `runs/latest`).
 - `--config FILE` – alternate configuration (default `configs/default.yaml`).
 - `--top-n INT` – guides per gene (default 10).

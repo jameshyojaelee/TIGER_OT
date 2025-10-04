@@ -5,12 +5,12 @@ Cas13 Guide Design - Master Workflow
 Standalone, optimized pipeline for Cas13 guide RNA design.
 
 Usage:
-    python3 run_workflow.py targets.txt [options]
+    python3 run_workflow.py targets.txt --species {human,mouse} [options]
 
 Examples:
-    python3 run_workflow.py targets.txt
-    python3 run_workflow.py targets.txt --top-n 5
-    python3 run_workflow.py targets.txt --config configs/custom.yaml
+    python3 run_workflow.py targets.txt --species mouse
+    python3 run_workflow.py targets.txt --species mouse --top-n 5
+    python3 run_workflow.py targets.txt --species human --config configs/custom.yaml
 """
 
 import sys
@@ -31,14 +31,14 @@ def main():
         epilog="""
 Examples:
   # Basic usage
-  python3 run_workflow.py targets.txt
+  python3 run_workflow.py targets.txt --species mouse
   
   # Advanced options
-  python3 run_workflow.py targets.txt --top-n 5 --skip-download
-  python3 run_workflow.py targets.txt --config custom.yaml --dry-run
+  python3 run_workflow.py targets.txt --species mouse --top-n 5 --skip-download
+  python3 run_workflow.py targets.txt --species human --config custom.yaml --dry-run
   
   # Resume from specific step
-  python3 run_workflow.py targets.txt --resume-from offtarget
+  python3 run_workflow.py targets.txt --species mouse --resume-from offtarget
         """
     )
     
@@ -47,6 +47,13 @@ Examples:
         'targets',
         type=str,
         help='Path to targets.txt file (gene names, one per line)'
+    )
+    
+    parser.add_argument(
+        '--species',
+        choices=['human', 'mouse'],
+        required=True,
+        help='Species for guide design (choose human or mouse)'
     )
     
     # Optional arguments
@@ -122,6 +129,19 @@ Examples:
     main_dir = Path(__file__).parent
     config = load_config(main_dir / args.config)
     
+    # Resolve species-specific settings
+    species_key = args.species.lower()
+    species_options = config.get('species_options', {})
+    if species_key not in species_options:
+        raise SystemExit(f"Species '{args.species}' is not configured. Available options: {', '.join(species_options)}")
+
+    species_config = species_options[species_key]
+    config['selected_species'] = species_key
+    config['species'] = species_config['ensembl_name']
+    config.setdefault('offtarget', {})['reference_transcriptome'] = species_config['reference_transcriptome']
+
+    logger.info(f"Selected species: {species_key} → {config['species']}")
+
     # Update config with command-line arguments
     config['top_n_guides'] = args.top_n
     config['output_dir'] = args.output_dir

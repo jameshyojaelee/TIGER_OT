@@ -29,6 +29,30 @@ class EnsemblDownloader:
         self.session = requests.Session()
         self.session.headers.update({'Content-Type': 'application/json'})
     
+    def _candidate_symbols(self, gene_name):
+        """Generate case-insensitive symbol variants for lookup."""
+        base = (gene_name or "").strip()
+        if not base:
+            return []
+
+        candidates = []
+
+        def add(symbol):
+            if symbol and symbol not in candidates:
+                candidates.append(symbol)
+
+        base_lower = base.lower()
+        add(base)
+        add(base_lower)
+        add(base.upper())
+        add(base_lower.capitalize())
+
+        if self.species == 'mus_musculus':
+            mouse_style = base_lower[:1].upper() + base_lower[1:]
+            add(mouse_style)
+
+        return candidates
+
     def get_gene_id(self, gene_name):
         """
         Get Ensembl gene ID from gene symbol
@@ -37,25 +61,33 @@ class EnsemblDownloader:
             gene_name: Gene symbol (e.g., 'Nanog')
             
         Returns:
-            str: Ensembl gene ID or None
+            tuple[str, str]: (Ensembl gene ID, resolved symbol) or (None, None)
         """
-        url = f"{self.rest_url}/lookup/symbol/{self.species}/{gene_name}"
-        
-        try:
-            response = self.session.get(url)
-            time.sleep(self.rate_limit_delay)
-            
-            if response.status_code == 200:
-                data = response.json()
-                return data.get('id')
-            else:
+        for symbol in self._candidate_symbols(gene_name):
+            url = f"{self.rest_url}/lookup/symbol/{self.species}/{symbol}"
+
+            try:
+                response = self.session.get(url)
+                time.sleep(self.rate_limit_delay)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    resolved_symbol = data.get('display_name') or data.get('symbol') or symbol
+                    if self.logger and symbol != gene_name:
+                        self.logger.debug(f"Resolved gene symbol '{gene_name}' → '{resolved_symbol}'")
+                    return data.get('id'), resolved_symbol
+
                 if self.logger:
-                    self.logger.warning(f"Gene {gene_name} not found (HTTP {response.status_code})")
-                return None
-        except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error fetching gene ID for {gene_name}: {e}")
-            return None
+                    self.logger.debug(
+                        f"Gene {gene_name} not found when querying '{symbol}' (HTTP {response.status_code})"
+                    )
+            except Exception as e:
+                if self.logger:
+                    self.logger.error(f"Error fetching gene ID for {gene_name} ({symbol}): {e}")
+
+        if self.logger:
+            self.logger.warning(f"Gene {gene_name} not found in Ensembl for species {self.species}")
+        return None, None
     
     def get_transcripts(self, gene_id):
         """
@@ -151,7 +183,7 @@ class EnsemblDownloader:
             self.logger.info(f"Downloading {gene_name}...")
         
         # Get gene ID
-        gene_id = self.get_gene_id(gene_name)
+        gene_id, resolved_symbol = self.get_gene_id(gene_name)
         if not gene_id:
             return None
         
@@ -173,15 +205,17 @@ class EnsemblDownloader:
             return None
         
         # Create SeqRecord
+        resolved_name = resolved_symbol or gene_name
+
         record = SeqRecord(
             Seq(sequence.upper()),
-            id=f"{gene_name}_{transcript_id}",
-            description=f"{gene_name} | {transcript_id} | {seq_type}"
+            id=f"{resolved_name}_{transcript_id}",
+            description=f"{resolved_name} | {transcript_id} | {seq_type}"
         )
         
         # Save individual FASTA if requested
         if output_dir:
-            output_path = Path(output_dir) / f"{gene_name}_{seq_type}.fasta"
+            output_path = Path(output_dir) / f"{resolved_name}_{seq_type}.fasta"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             SeqIO.write([record], output_path, 'fasta')
         
@@ -206,6 +240,7 @@ class EnsemblDownloader:
         for gene_name in gene_list:
             record = self.download_gene(gene_name, seq_type, output_dir)
             if record:
+                record.annotations['original_name'] = gene_name
                 records.append(record)
                 if self.logger:
                     self.logger.info(f"✅ {gene_name}: {len(record.seq)} bp")

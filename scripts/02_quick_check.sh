@@ -50,21 +50,28 @@ else
   status_ok=false
 fi
 
-REF_LINK="resources/reference/gencode.vM37.transcripts.uc.joined"
-if [ -f "$REF_LINK" ]; then
-  echo "✅ Reference transcriptome present: $REF_LINK"
-elif [ -L "$REF_LINK" ]; then
-  TARGET=$(readlink "$REF_LINK")
-  if [ -e "$REF_LINK" ]; then
-    echo "✅ Reference symlink resolves: $REF_LINK -> $TARGET"
+declare -A REF_PATHS
+REF_PATHS[mouse]="resources/reference/gencode.vM37.transcripts.uc.joined"
+REF_PATHS[human]="resources/reference/gencode.v47.transcripts.fa"
+
+for species in "${!REF_PATHS[@]}"; do
+  ref_path="${REF_PATHS[$species]}"
+  label="${species^}"
+  if [ -f "$ref_path" ]; then
+    echo "✅ $label transcriptome present: $ref_path"
+  elif [ -L "$ref_path" ]; then
+    target=$(readlink "$ref_path")
+    if [ -e "$ref_path" ]; then
+      echo "✅ $label transcriptome symlink resolves: $ref_path -> $target"
+    else
+      echo "⚠️  $label transcriptome symlink broken: $ref_path -> $target"
+      status_ok=false
+    fi
   else
-    echo "⚠️  Reference symlink broken: $REF_LINK -> $TARGET"
+    echo "⚠️  $label transcriptome missing at $ref_path"
     status_ok=false
   fi
-else
-  echo "⚠️  Reference transcriptome missing"
-  status_ok=false
-fi
+done
 
 if [ -x "$WRAPPER" ]; then
   if "$WRAPPER" python3 - <<'PY' 2>/dev/null; then

@@ -1,4 +1,26 @@
 ================================================================================
+WORKFLOW UPDATES - 2025-10-04
+================================================================================
+
+HIGHLIGHTS:
+- Added required `--species {mouse,human}` flag to `scripts/04_run_workflow.sh` / `run_tiger.py`
+- Auto-wire species-specific Ensembl names and transcriptomes via `configs/default.yaml`
+- `scripts/01_setup_workspace.sh` now bootstraps the human transcriptome from `/gpfs/commons/home/jameslee/reference_genome`
+- Ensembl downloads are case-insensitive (input gene symbols can be upper/lower/mixed)
+
+DETAILS:
+- `configs/default.yaml` and `configs/smoke-test.yaml` now expose `species_options` with Ensembl IDs + reference paths
+- `run_tiger.py` enforces the species choice, logs the resolved Ensembl name, and injects the matching transcriptome path
+- `workflows/master.py` tracks original vs resolved gene symbols so downstream steps stay consistent
+- `scripts/02_quick_check.sh` / `scripts/03_preflight_check.sh` validate both mouse and human transcriptomes
+- `scripts/01_setup_workspace.sh` copies `gencode.v47.transcripts.fa` on demand (decompressing from the central gzipped archive)
+- Documentation refreshed to cover the new CLI and reference expectations
+
+NOTES:
+- Large reference FASTA files remain git-ignored; copying happens locally during setup
+- Smoke-test config maps both species to the bundled miniature reference so quick runs stay lightweight
+
+================================================================================
 WORKFLOW UPDATES - 2025-09-30
 ================================================================================
 

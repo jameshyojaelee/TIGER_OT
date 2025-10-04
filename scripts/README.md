@@ -7,6 +7,8 @@ Run the numbered scripts in order when setting up a fresh checkout:
 3. `scripts/03_preflight_check.sh` – full diagnostics (use before production runs).
 4. `scripts/04_run_workflow.sh` – launch the Cas13 TIGER workflow.
 
+> `scripts/04_run_workflow.sh` now requires `--species {mouse,human}`. Choose `mouse` for `mus_musculus` or `human` for `homo_sapiens` runs.
+
 Optional helpers:
 - `scripts/00_load_environment.sh` – environment wrapper that backs the workflow launcher.
 - `scripts/01b_create_conda_env.sh` – provision an isolated conda environment.

@@ -42,7 +42,7 @@ Klf4
 EOF
 
 # Run the workflow (single-line launcher)
-scripts/04_run_workflow.sh my_targets.txt
+scripts/04_run_workflow.sh my_targets.txt --species mouse
 
 # Inspect results
 head runs/latest/final_guides.csv
@@ -64,13 +64,13 @@ head runs/latest/final_guides.csv
 1. scripts/01_setup_workspace.sh
 2. scripts/02_quick_check.sh
 3. scripts/03_preflight_check.sh
-4. scripts/04_run_workflow.sh <targets>
+4. scripts/04_run_workflow.sh <targets> --species {mouse,human}
 
 ### Smoke Test (Bundled)
 For a quick verification that ships with the repo, use the tiny reference + sample config:
 
 ```bash
-scripts/04_run_workflow.sh examples/targets/test_targets.txt --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
+scripts/04_run_workflow.sh examples/targets/test_targets.txt --species mouse --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
 ```
 
 Results land in `runs/smoke/final_guides.csv` and the run finishes in under a minute.
@@ -83,7 +83,7 @@ Results land in `runs/smoke/final_guides.csv` and the run finishes in under a mi
 Always launch the workflow through `scripts/04_run_workflow.sh` (legacy alias `./run_tiger_workflow.sh` remains available); it configures the TIGER environment (purges conflicting modules, loads `TensorFlow/2.15.1-base`, and sets CPU-only TensorFlow flags) before delegating to the Python driver.
 
 ```bash
-scripts/04_run_workflow.sh targets.txt
+scripts/04_run_workflow.sh targets.txt --species {mouse,human}
 ```
 
 Behind the scenes the launcher:
@@ -92,13 +92,15 @@ Behind the scenes the launcher:
 - Adds `vendor/venv_packages/` libraries and `src/` to `PYTHONPATH`
 - Calls `scripts/00_load_environment.sh` under the hood for advanced chaining compatibility
 
-> Note: `resources/reference/gencode.vM37.transcripts.uc.joined` ships as a tiny two-transcript FASTA so smoke tests work anywhere. Replace it or update `configs/default.yaml` to a full transcriptome before production runs.
+> Notes:
+> - `resources/reference/gencode.vM37.transcripts.uc.joined` ships as a tiny two-transcript FASTA so smoke tests work anywhere. Replace it or update `configs/default.yaml` to a full transcriptome before production runs.
+> - Human runs expect `resources/reference/gencode.v47.transcripts.fa`. `scripts/01_setup_workspace.sh` will copy it automatically from `/gpfs/commons/home/jameslee/reference_genome/refdata-gex-GRCh38-2024-A/genome/gencode.v47.transcripts.fa.gz` when available, or you can provide your own symlink/copy.
 
 #### GPU mode
 Need GPUs? export `TIGER_USE_GPU=1` (and, if required on your cluster, `TIGER_TF_GPU_MODULE` with the TensorFlow module that includes CUDA) before running:
 
 ```bash
-TIGER_USE_GPU=1 TIGER_TF_GPU_MODULE=TensorFlow/2.15.1-gpu scripts/04_run_workflow.sh targets.txt --threads 8
+TIGER_USE_GPU=1 TIGER_TF_GPU_MODULE=TensorFlow/2.15.1-gpu scripts/04_run_workflow.sh targets.txt --species mouse --threads 8
 ```
 
 When `TIGER_USE_GPU` is unset, the wrapper forces CPU execution and suppresses the duplicate CUDA plugin warnings you may have noticed earlier.
@@ -160,25 +162,25 @@ Nanog,TGATCACACAGACAACCACCAGC,0.992,123,4,0,0,5,12,34
 scripts/04_run_workflow.sh --help
 
 # Dry run (prints plan, no execution)
-scripts/04_run_workflow.sh targets.txt --dry-run
+scripts/04_run_workflow.sh targets.txt --species mouse --dry-run
 
 # Main execution (default settings)
-scripts/04_run_workflow.sh targets.txt
+scripts/04_run_workflow.sh targets.txt --species mouse
 ```
 
 ### Common Variants
 ```bash
 # Request fewer guides per gene
-scripts/04_run_workflow.sh my_targets.txt --top-n 5
+scripts/04_run_workflow.sh my_targets.txt --species mouse --top-n 5
 
 # Custom configuration file
-scripts/04_run_workflow.sh my_targets.txt --config configs/alt_config.yaml
+scripts/04_run_workflow.sh my_targets.txt --species mouse --config configs/alt_config.yaml
 
 # Resume after resolving an issue
-scripts/04_run_workflow.sh my_targets.txt --resume-from offtarget
+scripts/04_run_workflow.sh my_targets.txt --species mouse --resume-from offtarget
 
 # Increase verbosity for debugging
-scripts/04_run_workflow.sh my_targets.txt --verbose
+scripts/04_run_workflow.sh my_targets.txt --species mouse --verbose
 ```
 
 ### Example End-to-End Session
@@ -190,7 +192,7 @@ Sox2
 EOF
 
 # Execute the workflow
-scripts/04_run_workflow.sh test_targets.txt --verbose
+scripts/04_run_workflow.sh test_targets.txt --species mouse --verbose
 
 # Inspect key artifacts
 cut -d',' -f1 runs/latest/final_guides.csv | tail -n +2 | sort | uniq -c
@@ -227,6 +229,14 @@ runs/<job>/
 
 ### `configs/default.yaml` Snapshot (defaults)
 ```yaml
+species_options:
+  mouse:
+    ensembl_name: "mus_musculus"
+    reference_transcriptome: "resources/reference/gencode.vM37.transcripts.uc.joined"
+  human:
+    ensembl_name: "homo_sapiens"
+    reference_transcriptome: "resources/reference/gencode.v47.transcripts.fa"
+
 filtering:
   top_n_guides: 10
   min_guide_score: 0.80   # Filter by TIGER score first
@@ -288,8 +298,9 @@ tiger:
 
 # Off-target search
 offtarget:
-  reference_transcriptome: "resources/reference/gencode.vM37.transcripts.uc.joined"
+  # transcriptome path is resolved from species_options at runtime
   max_mismatches: 5
+  binary_path: "bin/offtarget_search"
   chunk_size: 1500
 
 # Output controls
@@ -405,7 +416,7 @@ awk -F',' 'NR>1 {print $3}' runs/latest/final_guides.csv | sort -n | head -10
 
 ### Need more visibility
 ```bash
-scripts/04_run_workflow.sh targets.txt --verbose
+scripts/04_run_workflow.sh targets.txt --species mouse --verbose
 less runs/latest/workflow.log
 ```
 
@@ -427,7 +438,7 @@ src/
 ├── lib/tiger/predictor.py   # Updated to call tiger_core
 resources/models/
 └── tiger_model/             # SavedModel + calibration assets
-scripts/04_run_workflow.sh    # Single-line launcher (wraps the environment)
+scripts/04_run_workflow.sh --species {mouse,human}    # Single-line launcher (wraps the environment)
 scripts/00_load_environment.sh    # Environment wrapper (still available for advanced chaining)
 ```
 Workflow commands now rely solely on these bundled assets—no external TIGER checkout required.
@@ -462,7 +473,7 @@ Workflow commands now rely solely on these bundled assets—no external TIGER ch
 cat > test.txt <<'EOF'
 Nanog
 EOF
-scripts/04_run_workflow.sh test.txt --output-dir test_out --verbose
+scripts/04_run_workflow.sh test.txt --species mouse --output-dir test_out --verbose
 cat test_out/final_guides.csv
 ```
 

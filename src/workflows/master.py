@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
+from Bio import SeqIO
 
 # Add parent lib to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
@@ -41,7 +42,9 @@ class Cas13WorkflowRunner:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Load target genes
-        self.targets = self._load_targets()
+        self.original_targets = self._load_targets()
+        self.targets = list(self.original_targets)
+        self.gene_aliases = {}
         
         # Initialize components
         self.downloader = None
@@ -60,6 +63,47 @@ class Cas13WorkflowRunner:
             self.logger.info(f"Loaded {len(targets)} target genes")
         
         return targets
+
+    def _match_original_symbol(self, resolved_symbol):
+        """Find original user-supplied symbol matching a resolved Ensembl symbol."""
+        resolved_lower = resolved_symbol.lower()
+        for original in self.original_targets:
+            if original.lower() == resolved_lower:
+                return original
+        return resolved_symbol
+
+    def _register_resolved_targets(self, resolved_names, alias_map=None):
+        """Update internal target bookkeeping after resolving gene symbols."""
+        alias_map = alias_map or {}
+
+        for resolved in resolved_names:
+            alias_map.setdefault(resolved, self._match_original_symbol(resolved))
+
+        if self.logger:
+            renamed = [
+                f"{alias_map[resolved]} → {resolved}"
+                for resolved in resolved_names
+                if alias_map[resolved] and alias_map[resolved].lower() != resolved.lower()
+            ]
+            if renamed:
+                preview = ', '.join(renamed[:5])
+                more = '...' if len(renamed) > 5 else ''
+                self.logger.info(f"Gene symbols normalized: {preview}{more}")
+
+        missing_originals = [
+            original for original in self.original_targets
+            if all(original.lower() != resolved.lower() for resolved in resolved_names)
+        ]
+
+        if self.logger and missing_originals:
+            preview = ', '.join(missing_originals[:5])
+            more = '...' if len(missing_originals) > 5 else ''
+            self.logger.warning(
+                f"⚠️  {len(missing_originals)} input gene(s) could not be resolved: {preview}{more}"
+            )
+
+        self.targets = resolved_names
+        self.gene_aliases = alias_map
     
     def run(self, skip_download=False, skip_validation=False, resume_from=None):
         """
@@ -145,6 +189,9 @@ class Cas13WorkflowRunner:
         if skip_download and fasta_file.exists():
             if self.logger:
                 self.logger.info(f"⏭️  Skipping download (file exists): {fasta_file}")
+            resolved_names = [record.id.split('_')[0] for record in SeqIO.parse(fasta_file, 'fasta')]
+            if resolved_names:
+                self._register_resolved_targets(resolved_names)
             return fasta_file
         
         # Initialize downloader
@@ -170,6 +217,17 @@ class Cas13WorkflowRunner:
         
         if self.logger:
             self.logger.info(f"✅ Downloaded {len(records)} sequences")
+        
+        resolved_names = []
+        alias_map = {}
+        for record in records:
+            resolved = record.id.split('_')[0]
+            original = record.annotations.get('original_name', resolved)
+            resolved_names.append(resolved)
+            alias_map[resolved] = original
+
+        if resolved_names:
+            self._register_resolved_targets(resolved_names, alias_map)
         
         return fasta_file
     

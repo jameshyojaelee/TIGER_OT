@@ -118,40 +118,62 @@ else
 fi
 
 echo ""
-section "Test 9: Reference Dataset"
+section "Test 9: Reference Datasets"
 REF_INFO=$(
   SCRIPT_DIR="$ROOT_DIR" "$WRAPPER" python3 - <<'PYCONF'
 import os
 import yaml
 from pathlib import Path
+
 root = Path(os.environ['SCRIPT_DIR'])
 with open(root / 'configs' / 'default.yaml') as f:
     cfg = yaml.safe_load(f)
-ref = Path(cfg['offtarget']['reference_transcriptome'])
-if not ref.is_absolute():
-    ref = root / ref
-if ref.exists():
-    print(f"OK|{ref}")
-elif ref.is_symlink():
-    target = ref.resolve(strict=False)
-    print(f"BROKEN|{ref}|{target}")
+
+species_opts = cfg.get('species_options', {})
+if not species_opts:
+    print("|MISSING|No species configured|")
 else:
-    print(f"MISSING|{ref}|")
+    for species, opt in sorted(species_opts.items()):
+        ref = Path(opt.get('reference_transcriptome', ''))
+        if not ref.is_absolute():
+            ref = root / ref
+
+        if ref.exists():
+            print(f"{species}|OK|{ref}|")
+        elif ref.is_symlink():
+            target = ref.resolve(strict=False)
+            print(f"{species}|BROKEN|{ref}|{target}")
+        else:
+            print(f"{species}|MISSING|{ref}|")
 PYCONF
 )
-IFS='|' read -r REF_STATUS REF_PATH REF_TARGET <<<"$REF_INFO"
-case "$REF_STATUS" in
-  OK)
-    test_pass "Reference dataset available: $REF_PATH"
-    ;;
-  BROKEN)
-    echo "Symlink target: $REF_TARGET"
-    test_fail "Reference symlink broken: $REF_PATH"
-    ;;
-  *)
-    test_fail "Reference dataset missing: $REF_PATH"
-    ;;
-esac
+
+ref_check_passed=true
+while IFS='|' read -r SPECIES REF_STATUS REF_PATH REF_TARGET; do
+  [ -z "$SPECIES" ] && continue
+  case "$REF_STATUS" in
+    OK)
+      test_pass "${SPECIES^} transcriptome available: $REF_PATH"
+      ;;
+    BROKEN)
+      [ -n "$REF_TARGET" ] && echo "Symlink target: $REF_TARGET"
+      test_fail "${SPECIES^} transcriptome symlink broken: $REF_PATH"
+      ref_check_passed=false
+      ;;
+    MISSING)
+      test_fail "${SPECIES^} transcriptome missing: $REF_PATH"
+      ref_check_passed=false
+      ;;
+    *)
+      test_fail "Transcriptome check failed: $REF_STATUS"
+      ref_check_passed=false
+      ;;
+  esac
+done <<< "$REF_INFO"
+
+if [ "$ref_check_passed" = true ]; then
+  :
+fi
 
 echo ""
 cat <<"SUMMARY"

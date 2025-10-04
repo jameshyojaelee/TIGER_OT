@@ -3,7 +3,15 @@
 
 # Project settings
 project_name: "cas13_guides"
-species: "mus_musculus"  # or "homo_sapiens"
+
+# Supported species (select via --species at runtime)
+species_options:
+  mouse:
+    ensembl_name: "mus_musculus"
+    reference_transcriptome: "resources/reference/gencode.vM37.transcripts.uc.joined"
+  human:
+    ensembl_name: "homo_sapiens"
+    reference_transcriptome: "resources/reference/gencode.v47.transcripts.fa"
 
 # TIGER settings
 tiger:
@@ -17,7 +25,6 @@ tiger:
 
 # Off-target settings
 offtarget:
-  reference_transcriptome: "resources/reference/gencode.vM37.transcripts.uc.joined"
   max_mismatches: 5
   binary_path: "bin/offtarget_search"
   chunk_size: 1200  # Guides per batch (increase when running on high-memory nodes)

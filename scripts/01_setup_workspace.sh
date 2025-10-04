@@ -96,16 +96,41 @@ else
 fi
 
 echo ""
-# Check for reference transcriptome target
-echo "[4/4] Verifying transcriptome reference"
-REF_FILE="resources/reference/gencode.vM37.transcripts.uc.joined"
-if [ -f "$REF_FILE" ]; then
-  echo "✅ Reference found: $REF_FILE"
+# Check for reference transcriptome targets
+echo "[4/4] Verifying transcriptome references"
+
+MOUSE_REF="resources/reference/gencode.vM37.transcripts.uc.joined"
+if [ -f "$MOUSE_REF" ]; then
+  echo "✅ Mouse transcriptome found: $MOUSE_REF"
 else
   cat <<'MSG'
-⚠️  Transcriptome reference not found at resources/reference/gencode.vM37.transcripts.uc.joined
-    Provide a symlink or edit configs/default.yaml → offtarget.reference_transcriptome
+⚠️  Mouse transcriptome not found at resources/reference/gencode.vM37.transcripts.uc.joined
+    Provide a symlink or copy your lab's transcriptome to the path above.
 MSG
+fi
+
+HUMAN_REF="resources/reference/gencode.v47.transcripts.fa"
+HUMAN_SRC="/gpfs/commons/home/jameslee/reference_genome/refdata-gex-GRCh38-2024-A/genome/gencode.v47.transcripts.fa.gz"
+
+if [ -f "$HUMAN_REF" ]; then
+  echo "✅ Human transcriptome found: $HUMAN_REF"
+else
+  if [ -f "$HUMAN_SRC" ]; then
+    echo "ℹ️  Human transcriptome missing locally; copying from $HUMAN_SRC (this may take a few minutes)..."
+    mkdir -p "$(dirname "$HUMAN_REF")"
+    if gzip -dc "$HUMAN_SRC" > "$HUMAN_REF"; then
+      echo "✅ Human transcriptome copied to $HUMAN_REF"
+    else
+      echo "❌ Failed to copy human transcriptome. Remove any partial file and retry."
+      rm -f "$HUMAN_REF"
+    fi
+  else
+    cat <<'MSG'
+⚠️  Human transcriptome not found. Expected source at:
+    /gpfs/commons/home/jameslee/reference_genome/refdata-gex-GRCh38-2024-A/genome/gencode.v47.transcripts.fa.gz
+    Copy or symlink the file to resources/reference/gencode.v47.transcripts.fa.
+MSG
+  fi
 fi
 
 # Ship example targets file for new users

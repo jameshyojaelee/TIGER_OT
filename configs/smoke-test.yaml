@@ -1,5 +1,13 @@
 # Sample configuration for quick smoke tests with bundled reference
-species: "mus_musculus"
+
+# Supported species (select via --species at runtime)
+species_options:
+  mouse:
+    ensembl_name: "mus_musculus"
+    reference_transcriptome: "resources/reference/sample_reference.fa"
+  human:
+    ensembl_name: "homo_sapiens"
+    reference_transcriptome: "resources/reference/sample_reference.fa"
 
 # TIGER settings
 tiger:
@@ -14,7 +22,6 @@ tiger:
 # Off-target settings
 # Uses the tiny bundled reference (2 transcripts) so the workflow can run anywhere.
 offtarget:
-  reference_transcriptome: "resources/reference/sample_reference.fa"
   max_mismatches: 3
   binary_path: "bin/offtarget_search"
   chunk_size: 500
