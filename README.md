@@ -9,7 +9,7 @@ End-to-end Cas13 guide design with TIGER scoring, off-target analysis, and adapt
 3. `scripts/03_preflight_check.sh` – comprehensive diagnostics (run before production jobs).
 4. `scripts/04_run_workflow.sh targets.txt [options]` – launch the workflow via the environment wrapper.
 
-Optional: `scripts/01b_create_conda_env.sh` creates an isolated conda environment; `scripts/00_load_environment.sh` is the environment wrapper behind the launcher. Legacy scripts at the repo root call into these numbered entrypoints for backward compatibility.
+Optional: `scripts/01b_create_conda_env.sh` creates an isolated conda environment; `scripts/00_load_environment.sh` is the environment wrapper behind the launcher. Legacy shims now live under `scripts/legacy/` and forward to the numbered entrypoints for backward compatibility.
 
 ## Quick Start
 
@@ -26,15 +26,15 @@ scripts/02_quick_check.sh
 scripts/03_preflight_check.sh
 
 # 4. Prepare targets and launch
-cp targets.example.txt targets.txt  # edit to add your genes
+cp examples/targets/example_targets.txt targets.txt  # edit to add your genes
 scripts/04_run_workflow.sh targets.txt
 ```
 
 ### Smoke Test (bundled)
 
 ```bash
-scripts/04_run_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
-head output_smoke/final_guides.csv
+scripts/04_run_workflow.sh examples/targets/test_targets.txt --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
+head runs/smoke/final_guides.csv
 ```
 
 ## Features
@@ -46,23 +46,34 @@ head output_smoke/final_guides.csv
 - Resume-from checkpoints for long runs
 - Detailed logging plus optional validation of MM0 locations
 
+## Repository Layout
+
+- `configs/` – versioned defaults and smoke-test configurations
+- `docs/` – guides, status reports, and changelog
+- `examples/` – sample targets plus archived run outputs
+- `resources/` – bundled models and reference transcriptomes
+- `scripts/` – numbered setup/diagnostic/launch helpers (`scripts/legacy/` keeps old shims)
+- `src/` – Python sources (`lib/`, `workflows/`, native off-target code)
+- `vendor/venv_packages/` – optional vendored Python wheels used by the environment wrapper
+- `runs/` – default destination for new workflow executions (ignored by git)
+
 ## Installation Notes
 
 - Requires Python 3.10+, GCC toolchain, and access to TensorFlow modules on the cluster.
-- `scripts/01_setup_workspace.sh` skips `pip` when bundled dependencies under `venv_packages/` are present; set `TIGER_FORCE_PIP=1` to reinstall or `TIGER_SKIP_PIP=1` to skip explicitly (default). To pull TensorFlow via `pip`, export `TIGER_SKIP_TF_PIP=0`.
+- `scripts/01_setup_workspace.sh` skips `pip` when bundled dependencies under `vendor/venv_packages/` are present; set `TIGER_FORCE_PIP=1` to reinstall or `TIGER_SKIP_PIP=1` to skip explicitly (default). To pull TensorFlow via `pip`, export `TIGER_SKIP_TF_PIP=0`.
 - `scripts/01_setup_workspace.sh` still runs `make clean && make`; adjust the pip phase using the environment variables above depending on your cluster policy.
-- Provide TIGER model assets under `models/tiger_model/` (symlink or copy) and a reference transcriptome file referenced by `config.yaml` (`reference/gencode.vM37.transcripts.uc.joined` ships as a tiny smoke-test FASTA).
+- Provide TIGER model assets under `resources/models/tiger_model/` (symlink or copy) and a reference transcriptome file referenced by `configs/default.yaml` (`resources/reference/gencode.vM37.transcripts.uc.joined` ships as a tiny smoke-test FASTA).
 - Optional conda workflow: run `scripts/01b_create_conda_env.sh` first. If the solve is killed (common on shared login nodes), load a newer Anaconda module or skip conda and rely on the provided module wrapper instead.
 
 ## Usage
 
 ```bash
-scripts/04_run_workflow.sh targets.txt [--top-n 5 --config custom.yaml --threads 8]
+scripts/04_run_workflow.sh targets.txt [--top-n 5 --config configs/custom.yaml --threads 8]
 ```
 
 Common flags:
-- `--output-dir PATH` – change output location (default `output/`).
-- `--config FILE` – alternate configuration (default `config.yaml`).
+- `--output-dir PATH` – change output location (default `runs/latest`).
+- `--config FILE` – alternate configuration (default `configs/default.yaml`).
 - `--top-n INT` – guides per gene (default 10).
 - `--dry-run` – print execution plan without running steps.
 - `--skip-download` – reuse pre-downloaded FASTA files.
@@ -74,8 +85,8 @@ GPU mode: export `TIGER_USE_GPU=1` (and optionally `TIGER_TF_GPU_MODULE`) before
 
 ## Outputs
 
-- `output/final_guides.csv` – final ranked guides.
-- `output/workflow.log` – workflow log from the run.
+- `runs/<name>/final_guides.csv` – final ranked guides.
+- `runs/<name>/workflow.log` – workflow log from the run.
 - Additional CSV/JSON artifacts driven by configuration (e.g., MM0 validation reports).
 
 ## Diagnostics
@@ -85,8 +96,8 @@ GPU mode: export `TIGER_USE_GPU=1` (and optionally `TIGER_TF_GPU_MODULE`) before
 
 ## Documentation & Support
 
-- `WORKFLOW_GUIDE.md` – exhaustive playbook with configuration detail.
-- `WORKFLOW_STATUS.txt` – latest validation snapshot.
-- `UPDATE_SUMMARY.txt` – change log.
+- `docs/WORKFLOW_GUIDE.md` – exhaustive playbook with configuration detail.
+- `docs/WORKFLOW_STATUS.txt` – latest validation snapshot.
+- `docs/UPDATE_SUMMARY.txt` – change log.
 
 Issues or questions? Open a ticket in the lab tracker or message the TIGER maintainers on Slack.

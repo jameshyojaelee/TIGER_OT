@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-WRAPPER="${ROOT_DIR}/run_with_tiger_env.sh"
+WRAPPER="${ROOT_DIR}/scripts/00_load_environment.sh"
 DRIVER="${ROOT_DIR}/run_tiger.py"
 
 if [ "$#" -lt 1 ]; then

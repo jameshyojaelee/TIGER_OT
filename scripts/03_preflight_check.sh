@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$ROOT_DIR"
 
-WRAPPER="${ROOT_DIR}/run_with_tiger_env.sh"
+WRAPPER="${ROOT_DIR}/scripts/00_load_environment.sh"
 
 cat <<'HDR'
 ╔══════════════════════════════════════════════════════════════════════╗
@@ -30,9 +30,9 @@ test_fail() { echo "❌ $1"; FAIL=$((FAIL+1)); }
 
 section "Test 1: Environment Wrapper"
 if [ -x "$WRAPPER" ]; then
-  test_pass "run_with_tiger_env.sh exists and is executable"
+  test_pass "scripts/00_load_environment.sh exists and is executable"
 else
-  test_fail "run_with_tiger_env.sh missing or not executable"
+  test_fail "scripts/00_load_environment.sh missing or not executable"
 fi
 
 echo ""
@@ -66,7 +66,7 @@ fi
 
 echo ""
 section "Test 4: TIGER Core Files"
-if [ -f "lib/tiger_core/tiger.py" ]; then
+if [ -f "src/lib/tiger_core/tiger.py" ]; then
   test_pass "TIGER core files present"
 else
   test_fail "TIGER core files missing"
@@ -74,7 +74,7 @@ fi
 
 echo ""
 section "Test 5: TIGER Model Files"
-if [ -d "models/tiger_model/model" ] && [ -f "models/tiger_model/calibration_params.pkl" ]; then
+if [ -d "resources/models/tiger_model/model" ] && [ -f "resources/models/tiger_model/calibration_params.pkl" ]; then
   test_pass "TIGER model and calibration parameters present"
 else
   test_fail "TIGER model assets missing"
@@ -90,22 +90,23 @@ fi
 
 echo ""
 section "Test 7: Configuration File"
-if [ -f "config.yaml" ]; then
+CONFIG_FILE="configs/default.yaml"
+if [ -f "$CONFIG_FILE" ]; then
   if "$WRAPPER" python3 -c "
 import yaml
-with open('config.yaml') as f:
+with open('$CONFIG_FILE') as f:
     config = yaml.safe_load(f)
 print('✅ Configuration file valid')
 print(f'  min_guide_score: {config[\"filtering\"][\"min_guide_score\"]}')
 print(f'  mm0_tolerance: {config[\"filtering\"][\"mm0_tolerance\"]}')
 print(f'  top_n_guides: {config[\"filtering\"][\"top_n_guides\"]}')
 " 2>&1 | grep -v "^2025" | grep -v "To enable" | grep -v "TF-TRT" | grep -v "Unable to register"; then
-    test_pass "config.yaml parsed successfully"
+    test_pass "configs/default.yaml parsed successfully"
   else
-    test_fail "config.yaml failed to validate"
+    test_fail "configs/default.yaml failed to validate"
   fi
 else
-  test_fail "config.yaml missing"
+  test_fail "configs/default.yaml missing"
 fi
 
 echo ""
@@ -124,7 +125,7 @@ import os
 import yaml
 from pathlib import Path
 root = Path(os.environ['SCRIPT_DIR'])
-with open(root / 'config.yaml') as f:
+with open(root / 'configs' / 'default.yaml') as f:
     cfg = yaml.safe_load(f)
 ref = Path(cfg['offtarget']['reference_transcriptome'])
 if not ref.is_absolute():

@@ -45,18 +45,18 @@ EOF
 scripts/04_run_workflow.sh my_targets.txt
 
 # Inspect results
-head output/final_guides.csv
+head runs/latest/final_guides.csv
 ```
 
 ### What to Expect
-- Final guides saved to `output/final_guides.csv`
-- Workflow log at `output/workflow.log`
+- Final guides saved to `runs/<job>/final_guides.csv`
+- Workflow log at `runs/<job>/workflow.log`
 - Default selection: top 10 high-scoring guides per gene meeting MM criteria
 
 ### Success Checklist
 - [x] `scripts/03_preflight_check.sh` reports 9/9 tests passing
 - [x] Targets file prepared and reviewed
-- [x] `config.yaml` validated for this run
+- [x] Configuration validated (`configs/default.yaml` or your override)
 - [x] Single-line launcher used for every run
 - [x] Optional dry run completed before large jobs
 
@@ -70,10 +70,10 @@ head output/final_guides.csv
 For a quick verification that ships with the repo, use the tiny reference + sample config:
 
 ```bash
-scripts/04_run_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
+scripts/04_run_workflow.sh examples/targets/test_targets.txt --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
 ```
 
-Results land in `output_smoke/final_guides.csv` and the run finishes in under a minute.
+Results land in `runs/smoke/final_guides.csv` and the run finishes in under a minute.
 
 ---
 
@@ -89,10 +89,10 @@ scripts/04_run_workflow.sh targets.txt
 Behind the scenes the launcher:
 - Loads the TensorFlow environment and disables oneDNN custom ops
 - Clears CUDA visibility for consistent CPU execution (unless GPU mode is requested)
-- Adds `venv_packages/` libraries to `PYTHONPATH`
-- Calls `run_with_tiger_env.sh` under the hood for advanced chaining compatibility
+- Adds `vendor/venv_packages/` libraries and `src/` to `PYTHONPATH`
+- Calls `scripts/00_load_environment.sh` under the hood for advanced chaining compatibility
 
-> Note: `reference/gencode.vM37.transcripts.uc.joined` ships as a tiny two-transcript FASTA so smoke tests work anywhere. Replace it or point `config.yaml` to a full transcriptome before production runs.
+> Note: `resources/reference/gencode.vM37.transcripts.uc.joined` ships as a tiny two-transcript FASTA so smoke tests work anywhere. Replace it or update `configs/default.yaml` to a full transcriptome before production runs.
 
 #### GPU mode
 Need GPUs? export `TIGER_USE_GPU=1` (and, if required on your cluster, `TIGER_TF_GPU_MODULE` with the TensorFlow module that includes CUDA) before running:
@@ -105,7 +105,7 @@ When `TIGER_USE_GPU` is unset, the wrapper forces CPU execution and suppresses t
 
 ### Local Dependencies
 ```
-venv_packages/
+vendor/venv_packages/
 ├── pyyaml/
 ├── biopython/
 ├── requests/
@@ -123,7 +123,7 @@ scripts/03_preflight_check.sh
 The script verifies executable permissions, Python availability, package imports, TIGER assets, configuration validity, and the off-target binary.
 
 > **Setup knobs**
-> - `TIGER_SKIP_PIP=1` — skip pip entirely (default when `venv_packages/` is present)
+> - `TIGER_SKIP_PIP=1` — skip pip entirely (default when `vendor/venv_packages/` is present)
 > - `TIGER_FORCE_PIP=1` — force a fresh pip install
 > - `TIGER_SKIP_TF_PIP=0` — include TensorFlow/Keras in the pip install (defaults to using cluster modules)
 > - `TIGER_PIP_SCOPE=system` or `TIGER_PIP_TARGET=/path` — control installation scope
@@ -172,7 +172,7 @@ scripts/04_run_workflow.sh targets.txt
 scripts/04_run_workflow.sh my_targets.txt --top-n 5
 
 # Custom configuration file
-scripts/04_run_workflow.sh my_targets.txt --config alt_config.yaml
+scripts/04_run_workflow.sh my_targets.txt --config configs/alt_config.yaml
 
 # Resume after resolving an issue
 scripts/04_run_workflow.sh my_targets.txt --resume-from offtarget
@@ -193,8 +193,8 @@ EOF
 scripts/04_run_workflow.sh test_targets.txt --verbose
 
 # Inspect key artifacts
-cut -d',' -f1 output/final_guides.csv | tail -n +2 | sort | uniq -c
-awk -F',' 'NR>1 {print $3}' output/final_guides.csv | sort -n | head -10
+cut -d',' -f1 runs/latest/final_guides.csv | tail -n +2 | sort | uniq -c
+awk -F',' 'NR>1 {print $3}' runs/latest/final_guides.csv | sort -n | head -10
 ```
 
 ---
@@ -203,7 +203,7 @@ awk -F',' 'NR>1 {print $3}' output/final_guides.csv | sort -n | head -10
 
 ### Directory Layout
 ```
-output/
+runs/<job>/
 ├── sequences/
 │   └── all_targets.fasta        # Downloaded CDS sequences
 ├── tiger/
@@ -219,13 +219,13 @@ output/
 ### Operational Tips
 - Keep intermediate files (`tiger/`, `offtarget/`) for troubleshooting or reruns
 - Archive `workflow.log` with results to preserve provenance
-- Copy the exact `config.yaml` used into any report or manuscript
+- Copy the exact configuration used into any report or manuscript
 
 ---
 
 ## Configuration & Tuning
 
-### `config.yaml` Snapshot (defaults)
+### `configs/default.yaml` Snapshot (defaults)
 ```yaml
 filtering:
   top_n_guides: 10
@@ -280,7 +280,7 @@ output:
 ```yaml
 # TIGER scoring
 tiger:
-  model_path: "models/tiger_model"
+  model_path: "resources/models/tiger_model"
   batch_size: 500
   guide_length: 23
   context_5p: 3
@@ -288,7 +288,7 @@ tiger:
 
 # Off-target search
 offtarget:
-  reference_transcriptome: "reference/gencode.vM37.transcripts.uc.joined"
+  reference_transcriptome: "resources/reference/gencode.vM37.transcripts.uc.joined"
   max_mismatches: 5
   chunk_size: 1500
 
@@ -363,19 +363,19 @@ Use this report to prioritize manual review of guides with cross-gene perfect ma
 ### Quick Validation Commands
 ```bash
 # Confirm score threshold
-awk -F',' 'NR>1 && $3 < 0.80' output/final_guides.csv | wc -l
+awk -F',' 'NR>1 && $3 < 0.80' runs/latest/final_guides.csv | wc -l
 
 # Ensure no invalid guides
-awk -F',' 'NR>1 && $5 == 0' output/final_guides.csv | wc -l
+awk -F',' 'NR>1 && $5 == 0' runs/latest/final_guides.csv | wc -l
 
 # Check MM1/MM2 remain zero
-awk -F',' 'NR>1 && ($6 > 0 || $7 > 0)' output/final_guides.csv | wc -l
+awk -F',' 'NR>1 && ($6 > 0 || $7 > 0)' runs/latest/final_guides.csv | wc -l
 
 # Guide counts per gene
-cut -d',' -f1 output/final_guides.csv | tail -n +2 | sort | uniq -c
+cut -d',' -f1 runs/latest/final_guides.csv | tail -n +2 | sort | uniq -c
 
 # Score distribution snapshot
-awk -F',' 'NR>1 {print $3}' output/final_guides.csv | sort -n | head -10
+awk -F',' 'NR>1 {print $3}' runs/latest/final_guides.csv | sort -n | head -10
 ```
 
 ---
@@ -383,7 +383,7 @@ awk -F',' 'NR>1 {print $3}' output/final_guides.csv | sort -n | head -10
 ## Troubleshooting
 
 ### Workflow stops early or logs errors
-- Inspect `output/workflow.log` for the failing step
+- Inspect `runs/latest/workflow.log` for the failing step
 - Re-run diagnostics: `scripts/03_preflight_check.sh`
 - Resume from the last successful stage with `--resume-from`
 
@@ -392,7 +392,7 @@ awk -F',' 'NR>1 {print $3}' output/final_guides.csv | sort -n | head -10
 
 ### "Gene has no guides with score ≥ 0.80"
 - Lower the threshold: `min_guide_score: 0.70`
-- Confirm off-target search finished: `wc -l output/offtarget/results.csv`
+- Confirm off-target search finished: `wc -l runs/latest/offtarget/results.csv`
 
 ### "Invalid guides detected (MM0=0)"
 - Indicates incomplete or corrupt off-target counts
@@ -406,7 +406,7 @@ awk -F',' 'NR>1 {print $3}' output/final_guides.csv | sort -n | head -10
 ### Need more visibility
 ```bash
 scripts/04_run_workflow.sh targets.txt --verbose
-less output/workflow.log
+less runs/latest/workflow.log
 ```
 
 ---
@@ -422,13 +422,13 @@ less output/workflow.log
 
 ### TIGER Integration Details
 ```
-lib/
-├── tiger_core/          # Local TIGER implementation
-├── tiger/predictor.py   # Updated to call tiger_core
-models/
-└── tiger_model/         # SavedModel + calibration assets
+src/
+├── lib/tiger_core/          # Local TIGER implementation
+├── lib/tiger/predictor.py   # Updated to call tiger_core
+resources/models/
+└── tiger_model/             # SavedModel + calibration assets
 scripts/04_run_workflow.sh    # Single-line launcher (wraps the environment)
-run_with_tiger_env.sh    # Environment wrapper (still available for advanced chaining)
+scripts/00_load_environment.sh    # Environment wrapper (still available for advanced chaining)
 ```
 Workflow commands now rely solely on these bundled assets—no external TIGER checkout required.
 
@@ -469,14 +469,14 @@ cat test_out/final_guides.csv
 ---
 
 ## References & Support
-- **Logs & diagnostics**: `output/workflow.log`, `scripts/03_preflight_check.sh`
+- **Logs & diagnostics**: `runs/latest/workflow.log`, `scripts/03_preflight_check.sh`
 - **Support commands**: `--help`, `--dry-run`, `--resume-from`, `--verbose`
 - **Scientific references**:
   - TIGER — Wesley et al., *Nat. Biotechnol.* (2024)
   - Cas13 — Abudayyeh et al., *Science* (2016)
   - Ensembl REST API — https://rest.ensembl.org
 - **License**: MIT (unless overridden by project policy)
-- **Questions?** Check the log first, then share the failure context along with `workflow.log` and `config.yaml`
+- **Questions?** Check the log first, then share the failure context along with `workflow.log` and `runs/<job>/config.yaml`
 
 ---
 

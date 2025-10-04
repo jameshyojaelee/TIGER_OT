@@ -8,17 +8,17 @@ all: bin/offtarget_search
 	@echo "Run: scripts/04_run_workflow.sh targets.txt"
 
 # Build C off-target search binary
-bin/offtarget_search: lib/offtarget/search.c
+bin/offtarget_search: src/lib/offtarget/search.c
 	@echo "Building off-target search binary..."
 	@mkdir -p bin
-	@cd lib/offtarget && $(MAKE)
+	@cd src/lib/offtarget && $(MAKE)
 	@echo "✅ Binary built: bin/offtarget_search"
 
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
 	@rm -f bin/offtarget_search
-	@cd lib/offtarget && $(MAKE) clean
+	@cd src/lib/offtarget && $(MAKE) clean
 	@echo "✅ Clean complete"
 
 # Install Python dependencies

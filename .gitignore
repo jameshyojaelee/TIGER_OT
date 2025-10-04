@@ -11,16 +11,15 @@ build/
 
 # Virtual Environment
 venv/
-venv_packages/
+vendor/venv_packages/
 env/
 ENV/
 
 # Output directories
-output/
-output_smoke/
+runs/
 
 # Configuration files with potential sensitive data
-config.yaml
+configs/local*.yaml
 
 # IDE/Editor
 .claude/
@@ -43,11 +42,8 @@ workflow.log
 bin/offtarget_search
 
 # Reference data (large files)
-reference/*.fa
-reference/*.uc.joined
-
-# Test outputs
-test_targets.txt
+resources/reference/*.fa
+resources/reference/*.uc.joined
 
 # Temporary files
 *.tmp

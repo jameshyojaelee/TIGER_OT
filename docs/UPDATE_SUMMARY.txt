@@ -16,7 +16,7 @@ WHAT IT DOES:
 - Provides flexible MM0 filtering instead of strict minimum
 - Allows guides with MM0 in range: [min_MM0, min_MM0 + tolerance]
 
-CONFIGURATION (config.yaml):
+CONFIGURATION (configs/default.yaml):
   filtering:
     mm0_tolerance: 3  # Default
     
@@ -44,12 +44,12 @@ WHAT IT DOES:
 - Determines if matches are in same gene (OK) vs different genes (concerning)
 - Provides detailed report of potential cross-gene off-targets
 
-CONFIGURATION (config.yaml):
+CONFIGURATION (configs/default.yaml):
   output:
     validate_mm0_locations: true  # Enable validation
     
 OUTPUT FILE:
-  output/mm0_location_analysis.csv
+  runs/latest/mm0_location_analysis.csv
 
 REPORT INCLUDES:
 - Per-guide breakdown of MM0 match locations
@@ -76,14 +76,14 @@ UPDATED PARAMETERS:
 - min_guide_score: 0.70 → 0.80 (higher quality threshold)
 
 FILES MODIFIED:
-- config.yaml              - Added mm0_tolerance, validate_mm0_locations
+- configs/default.yaml              - Added mm0_tolerance, validate_mm0_locations
 - workflows/master.py      - Updated _apply_adaptive_mm0(), added _step_validate_mm0()
-- lib/tiger/validation.py  - Added validation script (NEW)
-- WORKFLOW_GUIDE.md        - Updated documentation
+- src/lib/tiger/validation.py  - Added validation script (NEW)
+- docs/WORKFLOW_GUIDE.md        - Updated documentation
 
 FILES CREATED:
-- lib/tiger/validation.py  - MM0 location analysis script
-- UPDATE_SUMMARY.txt       - This summary (NEW)
+- src/lib/tiger/validation.py  - MM0 location analysis script
+- docs/UPDATE_SUMMARY.txt       - This summary (NEW)
 
 ================================================================================
 
@@ -98,12 +98,12 @@ Run workflow as usual:
 Check results:
   
   # Main guides
-  head output/final_guides.csv
+  head runs/latest/final_guides.csv
   
   # MM0 location analysis (if enabled)
-  head output/mm0_location_analysis.csv
+  head runs/latest/mm0_location_analysis.csv
 
-Adjust settings in config.yaml:
+Adjust settings in configs/default.yaml:
 
   # For stricter filtering
   mm0_tolerance: 0
@@ -121,7 +121,7 @@ Adjust settings in config.yaml:
 DOCUMENTATION
 ================================================================================
 
-See WORKFLOW_GUIDE.md for complete documentation:
+See docs/WORKFLOW_GUIDE.md for complete documentation:
 - Configuration section
 - MM0 Tolerance Parameter
 - MM0 Location Validation (Optional)

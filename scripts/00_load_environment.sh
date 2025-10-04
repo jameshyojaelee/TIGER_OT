@@ -14,7 +14,7 @@ fi
 
 module load "${TF_MODULE}" 2>/dev/null || true
 
-export PYTHONPATH="${ROOT_DIR}/venv_packages:${PYTHONPATH:-}"
+export PYTHONPATH="${ROOT_DIR}/vendor/venv_packages:${ROOT_DIR}/src:${PYTHONPATH:-}"
 export TF_ENABLE_ONEDNN_OPTS=0
 
 if [ "$USE_GPU" = "1" ]; then

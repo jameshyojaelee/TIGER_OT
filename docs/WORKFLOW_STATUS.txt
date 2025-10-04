@@ -11,15 +11,15 @@ Status: 🎉 All Components Tested and Working
 
 PRE-FLIGHT CHECK RESULTS:
 
-  ✅ Test 1: Wrapper Script (run_with_tiger_env.sh)
+  ✅ Test 1: Wrapper Script (scripts/00_load_environment.sh)
   ✅ Test 2: Python Environment (Python 3.12.3)
   ✅ Test 3: Python Packages (TensorFlow 2.17.0, NumPy 1.26.4, Pandas 2.2.2)
-  ✅ Test 4: TIGER Core Files (lib/tiger_core/)
-  ✅ Test 5: TIGER Model Files (models/tiger_model/)
+  ✅ Test 4: TIGER Core Files (src/lib/tiger_core/)
+  ✅ Test 5: TIGER Model Files (resources/models/tiger_model/)
   ✅ Test 6: Workflow Script (run_tiger.py loads)
-  ✅ Test 7: Configuration File (config.yaml valid)
+  ✅ Test 7: Configuration File (configs/default.yaml valid)
   ✅ Test 8: Off-Target Binary (bin/offtarget_search)
-  ✅ Test 9: Reference Dataset (config.yaml + transcriptome reachable)
+  ✅ Test 9: Reference Dataset (configs/default.yaml + transcriptome reachable)
 
   Result: 9/9 PASSED ✅
 
@@ -50,16 +50,16 @@ TO RUN THE WORKFLOW:
   scripts/04_run_workflow.sh my_targets.txt
   
   # Or use the bundled smoke test (tiny reference + sample config)
-  scripts/04_run_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
+  scripts/04_run_workflow.sh examples/targets/test_targets.txt --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
   
   # Check results
-  head output/final_guides.csv
-  head output_smoke/final_guides.csv  # Smoke-test output
-  less output/mm0_location_analysis.csv  # If validation enabled
+  head runs/latest/final_guides.csv
+  head runs/smoke/final_guides.csv  # Smoke-test output
+  less runs/latest/mm0_location_analysis.csv  # If validation enabled
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CURRENT CONFIGURATION (config.yaml):
+CURRENT CONFIGURATION (configs/default.yaml):
 
   filtering:
     min_guide_score: 0.80    # High-quality threshold
@@ -88,20 +88,20 @@ QUALITY GUARANTEES:
 KEY SCRIPTS:
 
   scripts/04_run_workflow.sh  - Single-line launcher (recommended)
-  run_with_tiger_env.sh  - Environment wrapper (advanced)
+  scripts/00_load_environment.sh  - Environment wrapper (advanced)
   scripts/03_preflight_check.sh  - Test all components
   run_tiger.py           - Main workflow script
-  config.yaml            - Configuration (edit settings here)
-  reference/gencode.vM37.transcripts.uc.joined  - Bundled smoke-test transcriptome (replace for production)
+  configs/default.yaml            - Configuration (edit settings here)
+  resources/reference/gencode.vM37.transcripts.uc.joined  - Bundled smoke-test transcriptome (replace for production)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 DOCUMENTATION:
 
-  📖 READY_TO_USE.md      - Quick start (READ THIS FIRST!)
-  📖 WORKFLOW_GUIDE.md    - Complete guide
-  📖 README.md            - Full workflow documentation
-  📖 UPDATE_SUMMARY.txt   - Recent changes
+  📖 docs/READY_TO_USE.md      - Quick start (READ THIS FIRST!)
+  📖 docs/WORKFLOW_GUIDE.md    - Complete guide
+  📖 README.md                 - Full workflow documentation
+  📖 docs/UPDATE_SUMMARY.txt   - Recent changes
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -111,7 +111,7 @@ QUICK COMMANDS:
   scripts/04_run_workflow.sh targets.txt
   
   # Bundled smoke test
-  scripts/04_run_workflow.sh test_targets.txt --config config.sample.yaml --output-dir output_smoke --skip-validation
+  scripts/04_run_workflow.sh examples/targets/test_targets.txt --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
   
   # GPU run (set module as needed)
   TIGER_USE_GPU=1 TIGER_TF_GPU_MODULE=TensorFlow/2.15.1-gpu scripts/04_run_workflow.sh targets.txt --threads 8
@@ -135,7 +135,7 @@ WHAT'S NEW TODAY (2025-09-30):
   ✅ MM0 tolerance parameter (flexible filtering)
   ✅ MM0 location validation (analyzes cross-gene matches)
   ✅ Updated to min_guide_score: 0.80 (higher quality)
-  ✅ Environment fully configured (venv_packages/)
+  ✅ Environment fully configured (vendor/venv_packages/)
   ✅ All tests passing (9/9)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

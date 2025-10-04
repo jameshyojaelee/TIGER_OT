@@ -6,19 +6,19 @@ Standalone, optimized pipeline for Cas13 guide RNA design.
 
 Usage:
     python3 run_workflow.py targets.txt [options]
-    
+
 Examples:
     python3 run_workflow.py targets.txt
     python3 run_workflow.py targets.txt --top-n 5
-    python3 run_workflow.py targets.txt --config custom_config.yaml
+    python3 run_workflow.py targets.txt --config configs/custom.yaml
 """
 
 import sys
 import argparse
 from pathlib import Path
 
-# Add lib to path
-sys.path.insert(0, str(Path(__file__).parent / 'lib'))
+# Add source tree to path so "workflows" and helpers resolve when invoked as a script
+sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 from workflows.master import Cas13WorkflowRunner
 from utils.logger import setup_logger
@@ -53,15 +53,15 @@ Examples:
     parser.add_argument(
         '--output-dir', '-o',
         type=str,
-        default='output',
-        help='Output directory (default: output/)'
+        default='runs/latest',
+        help='Output directory (default: runs/latest)'
     )
     
     parser.add_argument(
         '--config', '-c',
         type=str,
-        default='config.yaml',
-        help='Configuration file (default: config.yaml)'
+        default='configs/default.yaml',
+        help='Configuration file (default: configs/default.yaml)'
     )
     
     parser.add_argument(

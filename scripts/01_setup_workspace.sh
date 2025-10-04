@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$ROOT_DIR"
-WRAPPER="${ROOT_DIR}/run_with_tiger_env.sh"
+WRAPPER="${ROOT_DIR}/scripts/00_load_environment.sh"
 if [ -x "$WRAPPER" ]; then
   PY_CMD=("$WRAPPER" python3)
 else
@@ -40,8 +40,8 @@ PIP_TARGET=${TIGER_PIP_TARGET:-}
 
 if [ "$SKIP_PIP" = "1" ]; then
   echo "ℹ️  Skipping pip install (TIGER_SKIP_PIP=1)."
-elif [ -d "venv_packages" ] && [ "$FORCE_PIP" != "1" ]; then
-  echo "ℹ️  Found bundled packages under venv_packages/; skipping pip install."
+elif [ -d "vendor/venv_packages" ] && [ "$FORCE_PIP" != "1" ]; then
+  echo "ℹ️  Found bundled packages under vendor/venv_packages/; skipping pip install."
   echo "    Set TIGER_FORCE_PIP=1 to force a reinstall."
 else
   tmp_req=$(mktemp)
@@ -73,7 +73,7 @@ else
       echo "✅ Python dependencies installed"
     else
       echo "⚠️  pip install failed."
-      echo "    If you are on the cluster, rely on modules + bundled venv_packages or re-run with TIGER_SKIP_PIP=1."
+      echo "    If you are on the cluster, rely on modules + bundled vendor/venv_packages or re-run with TIGER_SKIP_PIP=1."
     fi
   fi
   rm -f "$tmp_req"
@@ -82,35 +82,38 @@ fi
 echo ""
 # Check for required model assets and hint if missing
 echo "[3/4] Verifying model assets"
-if [ ! -d "models/tiger_model" ]; then
+MODEL_DIR="resources/models/tiger_model"
+if [ ! -d "$MODEL_DIR" ]; then
   cat <<'MSG'
-⚠️  Model directory missing: models/tiger_model
+⚠️  Model directory missing: resources/models/tiger_model
     Create symlinks to your TIGER model assets, for example:
-      ln -s /path/to/tiger_model models/tiger_model
-      ln -s /path/to/calibration.pkl models/calibration.pkl
-      ln -s /path/to/scoring.pkl models/scoring.pkl
+      ln -s /path/to/tiger_model resources/models/tiger_model
+      ln -s /path/to/calibration_params.pkl resources/models/tiger_model/calibration_params.pkl
+      ln -s /path/to/scoring_params.pkl resources/models/tiger_model/scoring_params.pkl
 MSG
 else
-  echo "✅ models/tiger_model present"
+  echo "✅ resources/models/tiger_model present"
 fi
 
 echo ""
 # Check for reference transcriptome target
 echo "[4/4] Verifying transcriptome reference"
-REF_FILE="reference/gencode.vM37.transcripts.uc.joined"
+REF_FILE="resources/reference/gencode.vM37.transcripts.uc.joined"
 if [ -f "$REF_FILE" ]; then
   echo "✅ Reference found: $REF_FILE"
 else
   cat <<'MSG'
-⚠️  Transcriptome reference not found at reference/gencode.vM37.transcripts.uc.joined
-    Provide a symlink or edit config.yaml → offtarget.reference_transcriptome
+⚠️  Transcriptome reference not found at resources/reference/gencode.vM37.transcripts.uc.joined
+    Provide a symlink or edit configs/default.yaml → offtarget.reference_transcriptome
 MSG
 fi
 
 # Ship example targets file for new users
 echo ""
-echo "📄 Writing example targets to targets.example.txt"
-cat > targets.example.txt <<'EOF_TARGETS'
+EXAMPLE_TARGETS="examples/targets/example_targets.txt"
+mkdir -p "$(dirname "$EXAMPLE_TARGETS")"
+echo "📄 Writing example targets to ${EXAMPLE_TARGETS}"
+cat > "$EXAMPLE_TARGETS" <<'EOF_TARGETS'
 # Example targets file
 # Add one gene name per line
 Nanog
@@ -122,7 +125,7 @@ EOF_TARGETS
 if "${PY_CMD[@]}" - <<'PY'; then
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path('lib')))
+sys.path.insert(0, str(Path('src')))
 from utils.logger import setup_logger  # noqa: F401
 from utils.config import load_config  # noqa: F401
 print('✅ Python module import test passed')

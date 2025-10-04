@@ -3,9 +3,9 @@ species: "mus_musculus"
 
 # TIGER settings
 tiger:
-  model_path: "models/tiger_model"
-  calibration_params: "models/calibration.pkl"
-  scoring_params: "models/scoring.pkl"
+  model_path: "resources/models/tiger_model"
+  calibration_params: "resources/models/tiger_model/calibration_params.pkl"
+  scoring_params: "resources/models/tiger_model/scoring_params.pkl"
   batch_size: 128
   guide_length: 23
   context_5p: 3
@@ -14,7 +14,7 @@ tiger:
 # Off-target settings
 # Uses the tiny bundled reference (2 transcripts) so the workflow can run anywhere.
 offtarget:
-  reference_transcriptome: "reference/sample_reference.fa"
+  reference_transcriptome: "resources/reference/sample_reference.fa"
   max_mismatches: 3
   binary_path: "bin/offtarget_search"
   chunk_size: 500

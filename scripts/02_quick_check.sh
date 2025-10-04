@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$ROOT_DIR"
-WRAPPER="${ROOT_DIR}/run_with_tiger_env.sh"
+WRAPPER="${ROOT_DIR}/scripts/00_load_environment.sh"
 if [ -x "$WRAPPER" ]; then
   PY_CMD=("$WRAPPER" python3)
 else
@@ -30,7 +30,7 @@ fi
 if "${PY_CMD[@]}" - <<'PY'; then
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path('lib')))
+sys.path.insert(0, str(Path('src')))
 from utils.logger import setup_logger  # noqa: F401
 from utils.config import load_config  # noqa: F401
 from download.ensembl import EnsemblDownloader  # noqa: F401
@@ -42,14 +42,15 @@ else
   status_ok=false
 fi
 
-if [ -d "models/tiger_model" ] || [ -L "models/tiger_model" ]; then
-  echo "✅ Model directory found: models/tiger_model"
+MODEL_DIR="resources/models/tiger_model"
+if [ -d "$MODEL_DIR" ] || [ -L "$MODEL_DIR" ]; then
+  echo "✅ Model directory found: $MODEL_DIR"
 else
-  echo "⚠️  Model assets missing. Link your TIGER model into models/tiger_model"
+  echo "⚠️  Model assets missing. Link your TIGER model into $MODEL_DIR"
   status_ok=false
 fi
 
-REF_LINK="reference/gencode.vM37.transcripts.uc.joined"
+REF_LINK="resources/reference/gencode.vM37.transcripts.uc.joined"
 if [ -f "$REF_LINK" ]; then
   echo "✅ Reference transcriptome present: $REF_LINK"
 elif [ -L "$REF_LINK" ]; then
@@ -70,13 +71,13 @@ if [ -x "$WRAPPER" ]; then
 import tensorflow as tf
 print('TensorFlow:', tf.__version__)
 PY
-    echo "✅ TensorFlow available via run_with_tiger_env.sh"
+    echo "✅ TensorFlow available via scripts/00_load_environment.sh"
   else
-    echo "⚠️  TensorFlow not available via run_with_tiger_env.sh"
+    echo "⚠️  TensorFlow not available via scripts/00_load_environment.sh"
     status_ok=false
   fi
 else
-  echo "⚠️  Environment wrapper missing (run_with_tiger_env.sh)"
+  echo "⚠️  Environment wrapper missing (scripts/00_load_environment.sh)"
   status_ok=false
 fi
 
@@ -84,7 +85,7 @@ if [ -f "targets.txt" ]; then
   n_targets=$(grep -v '^#' targets.txt | grep -v '^$' | wc -l)
   echo "✅ targets.txt present with $n_targets entries"
 else
-  echo "ℹ️  targets.txt not found; copy targets.example.txt to get started"
+  echo "ℹ️  targets.txt not found; copy examples/targets/example_targets.txt to get started"
 fi
 
 echo ""
