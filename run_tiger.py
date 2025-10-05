@@ -17,8 +17,13 @@ import sys
 import argparse
 from pathlib import Path
 
-# Add source tree to path so "workflows" and helpers resolve when invoked as a script
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+ROOT_DIR = Path(__file__).parent
+PACKAGE_SRC = ROOT_DIR / 'tiger_guides_pkg' / 'src'
+if PACKAGE_SRC.exists():
+    sys.path.insert(0, str(PACKAGE_SRC))
+
+# Add source tree to path so legacy utils resolve when invoked as a script
+sys.path.insert(0, str(ROOT_DIR / 'src'))
 
 from workflows.master import Cas13WorkflowRunner
 from utils.logger import setup_logger
@@ -145,7 +150,7 @@ Examples:
     # Update config with command-line arguments
     config['top_n_guides'] = args.top_n
     config['output_dir'] = args.output_dir
-    config['threads'] = args.threads
+    config.setdefault('compute', {})['threads'] = args.threads
     
     # Initialize workflow runner
     runner = Cas13WorkflowRunner(

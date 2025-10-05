@@ -150,6 +150,7 @@ EOF_TARGETS
 if "${PY_CMD[@]}" - <<'PY'; then
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path('tiger_guides_pkg') / 'src'))
 sys.path.insert(0, str(Path('src')))
 from utils.logger import setup_logger  # noqa: F401
 from utils.config import load_config  # noqa: F401

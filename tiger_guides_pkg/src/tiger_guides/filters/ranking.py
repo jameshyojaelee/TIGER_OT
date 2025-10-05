@@ -1,0 +1,82 @@
+"""Guide filtering and ranking helpers."""
+from __future__ import annotations
+
+import pandas as pd
+from typing import Dict, Tuple
+
+
+def apply_filters(guides: pd.DataFrame, config: Dict, logger=None) -> Tuple[pd.DataFrame, Dict[str, int]]:
+    stats = {}
+
+    filtering = config.get("filtering", {})
+    min_score = filtering.get("min_guide_score", 0.0)
+
+    if logger:
+        logger.info("\n" + "=" * 60)
+        logger.info(f"STEP 4.1: Filter by Guide Score (>= {min_score})")
+        logger.info("=" * 60)
+
+    high_score = guides[guides["Score"] >= min_score].copy()
+    stats["score_pass"] = len(high_score)
+
+    if logger:
+        logger.info(f"Guides passing score threshold: {len(high_score):,} / {len(guides):,}")
+
+    # Off-target thresholds
+    mm1_threshold = filtering.get("mm1_threshold", 0)
+    mm2_threshold = filtering.get("mm2_threshold", 0)
+
+    if logger:
+        logger.info("\n" + "=" * 60)
+        logger.info(f"STEP 4.2: Apply MM Filters (MM1<= {mm1_threshold}, MM2<= {mm2_threshold})")
+        logger.info("=" * 60)
+
+    filtered = high_score[
+        (high_score["MM0"] >= 1) &
+        (high_score["MM1"] <= mm1_threshold) &
+        (high_score["MM2"] <= mm2_threshold)
+    ].copy()
+    stats["mm_filters"] = len(filtered)
+
+    if filtering.get("adaptive_mm0", True):
+        filtered = _apply_adaptive_mm0(filtered, filtering, logger)
+        stats["adaptive_mm0"] = len(filtered)
+    else:
+        stats["adaptive_mm0"] = len(filtered)
+
+    top_n = config.get("top_n_guides", 10)
+    if logger:
+        logger.info("\n" + "=" * 60)
+        logger.info(f"STEP 4.3: Select Top {top_n} Guides per Gene")
+        logger.info("=" * 60)
+
+    ranked = (
+        filtered
+        .sort_values(["Gene", "Score"], ascending=[True, False])
+        .groupby("Gene")
+        .head(top_n)
+        .reset_index(drop=True)
+    )
+    stats["final"] = len(ranked)
+
+    return ranked, stats
+
+
+def _apply_adaptive_mm0(df: pd.DataFrame, filtering: Dict, logger=None) -> pd.DataFrame:
+    tolerance = filtering.get("mm0_tolerance", 0)
+    if tolerance == 999:
+        if logger:
+            logger.info("MM0 tolerance disabled (999). Keeping guides based on MM1/MM2 only.")
+        return df
+
+    selected = []
+    for gene, group in df.groupby("Gene"):
+        min_mm0 = group["MM0"].min()
+        threshold = min_mm0 + tolerance
+        subset = group[group["MM0"] <= threshold]
+        selected.append(subset)
+        if logger:
+            logger.info(f"{gene}: MM0 range {min_mm0}–{threshold} kept {len(subset)} guides")
+    if selected:
+        return pd.concat(selected, ignore_index=True)
+    return df

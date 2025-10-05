@@ -1,0 +1,39 @@
+project_name: "tiger_guides"
+tiger:
+  model_path: "resources/models/tiger_model"
+  calibration_params: "resources/models/tiger_model/calibration_params.pkl"
+  scoring_params: "resources/models/tiger_model/scoring_params.pkl"
+  batch_size: 500
+  guide_length: 23
+  context_5p: 3
+  context_3p: 0
+
+offtarget:
+  max_mismatches: 5
+  binary_path: "bin/offtarget_search"
+  chunk_size: 1200
+
+filtering:
+  top_n_guides: 10
+  min_guide_score: 0.8
+  mm1_threshold: 0
+  mm2_threshold: 0
+  adaptive_mm0: true
+  mm0_tolerance: 3
+
+output:
+  save_intermediate: true
+  compress_logs: false
+  generate_plots: false
+  validate_mm0_locations: false
+
+compute:
+  threads: 4
+  memory_gb: 16
+  use_gpu: false
+
+ensembl:
+  rest_url: "https://rest.ensembl.org"
+  prefer_canonical: true
+  prefer_appris_principal: true
+  rate_limit_delay: 0.5

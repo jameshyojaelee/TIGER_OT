@@ -1,0 +1,53 @@
+[project]
+name = "tiger-guides"
+version = "0.1.0"
+description = "Platform-agnostic Cas13 TIGER guide design workflow"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+  { name = "Sanjana Lab TIGER Team", email = "support@sanjanalab.org" }
+]
+requires-python = ">=3.10"
+dependencies = [
+  "click>=8.1",
+  "rich>=13.0",
+  "pyyaml>=6.0",
+  "pandas>=2.1",
+  "numpy>=1.26",
+  "biopython>=1.85",
+  "tqdm>=4.67",
+  "requests>=2.32"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "pytest-cov>=5.0",
+  "mypy>=1.10",
+  "ruff>=0.5"
+]
+
+[project.scripts]
+tiger-guides = "tiger_guides.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["tiger_guides"]
+
+[tool.setuptools.package-data]
+tiger_guides = [
+  "data/**/*.txt",
+  "data/**/*.yaml",
+  "data/**/*.csv",
+  "data/**/*.uc.joined",
+  "tiger_core/*.py",
+  "tiger/*.py",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]

@@ -1,0 +1,39 @@
+project_name: "tiger_guides_smoke"
+tiger:
+  model_path: "resources/models/tiger_model"
+  calibration_params: "resources/models/tiger_model/calibration_params.pkl"
+  scoring_params: "resources/models/tiger_model/scoring_params.pkl"
+  batch_size: 128
+  guide_length: 23
+  context_5p: 3
+  context_3p: 0
+
+offtarget:
+  max_mismatches: 3
+  binary_path: "bin/offtarget_search"
+  chunk_size: 500
+
+filtering:
+  top_n_guides: 3
+  min_guide_score: 0.4
+  mm1_threshold: 0
+  mm2_threshold: 0
+  adaptive_mm0: false
+  mm0_tolerance: 999
+
+output:
+  save_intermediate: false
+  compress_logs: false
+  generate_plots: false
+  validate_mm0_locations: false
+
+compute:
+  threads: 2
+  memory_gb: 8
+  use_gpu: false
+
+ensembl:
+  rest_url: "https://rest.ensembl.org"
+  prefer_canonical: true
+  prefer_appris_principal: true
+  rate_limit_delay: 0.5
