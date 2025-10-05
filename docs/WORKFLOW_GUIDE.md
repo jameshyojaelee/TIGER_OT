@@ -43,6 +43,10 @@ EOF
 
 # Run the workflow (single-line launcher)
 scripts/04_run_workflow.sh my_targets.txt --species mouse
+# Fetch references or models when needed
+scripts/fetch_reference.sh human
+TIGER_MODEL_ARCHIVE_URL=https://example.org/tiger_model.tar.gz \
+scripts/fetch_model.sh tiger
 
 # Inspect results
 head runs/latest/final_guides.csv

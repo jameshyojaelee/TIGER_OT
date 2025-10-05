@@ -1,0 +1,49 @@
+name: Docker Smoke Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tiger_guides_pkg/docker/**'
+      - 'tiger_guides_pkg/src/**'
+      - 'tiger_guides_pkg/pyproject.toml'
+      - '.github/workflows/docker-smoke.yml'
+  pull_request:
+    paths:
+      - 'tiger_guides_pkg/docker/**'
+      - 'tiger_guides_pkg/src/**'
+      - 'tiger_guides_pkg/pyproject.toml'
+      - '.github/workflows/docker-smoke.yml'
+
+concurrency:
+  group: docker-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f tiger_guides_pkg/docker/Dockerfile \
+            -t tiger-guides:smoke \
+            tiger_guides_pkg
+
+      - name: Run smoke test in container
+        run: |
+          docker run --rm tiger-guides:smoke
+
+      - name: Export smoke artifacts
+        run: |
+          container_id=$(docker create tiger-guides:smoke)
+          docker cp "$container_id:/work/runs/smoke" smoke_artifacts
+          docker rm "$container_id"
+
+      - name: Upload smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-smoke-results
+          path: smoke_artifacts

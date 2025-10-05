@@ -63,6 +63,7 @@ head runs/smoke/final_guides.csv
 - `scripts/01_setup_workspace.sh` skips `pip` when bundled dependencies under `vendor/venv_packages/` are present; set `TIGER_FORCE_PIP=1` to reinstall or `TIGER_SKIP_PIP=1` to skip explicitly (default). To pull TensorFlow via `pip`, export `TIGER_SKIP_TF_PIP=0`.
 - `scripts/01_setup_workspace.sh` still runs `make clean && make`; adjust the pip phase using the environment variables above depending on your cluster policy.
 - Provide TIGER model assets under `resources/models/tiger_model/` (symlink or copy). For references, the setup script checks both mouse (`resources/reference/gencode.vM37.transcripts.uc.joined`) and human (`resources/reference/gencode.v47.transcripts.fa`). The human transcriptome is automatically copied from `/gpfs/commons/home/jameslee/reference_genome/refdata-gex-GRCh38-2024-A/genome/gencode.v47.transcripts.fa.gz` if present; otherwise, copy or symlink your lab's version.
+- To download new references or models on-demand, use `scripts/fetch_reference.sh` or `scripts/fetch_model.sh`. The latter expects either `TIGER_MODEL_ARCHIVE` (local tar/zip) or `TIGER_MODEL_ARCHIVE_URL` (downloadable archive) and optionally `TIGER_MODEL_ARCHIVE_MD5` for checksum validation.
 - Optional conda workflow: run `scripts/01b_create_conda_env.sh` first. If the solve is killed (common on shared login nodes), load a newer Anaconda module or skip conda and rely on the provided module wrapper instead.
 
 ## Usage
@@ -94,6 +95,8 @@ GPU mode: export `TIGER_USE_GPU=1` (and optionally `TIGER_TF_GPU_MODULE`) before
 
 - `scripts/02_quick_check.sh` – fast sanity check (rerun after changes).
 - `scripts/03_preflight_check.sh` – full nine-part diagnostics (wrapper, Python packages, config, model, reference, binary).
+- `scripts/fetch_reference.sh <species> [dest]` – download transcriptome bundles with checksum verification.
+- `scripts/fetch_model.sh [model] [dest]` – download and cache TIGER model archives (requires env vars).
 
 ## Documentation & Support
 
