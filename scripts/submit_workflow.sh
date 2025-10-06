@@ -3,8 +3,8 @@
 #SBATCH --time=16:00:00
 #SBATCH --mem=200G
 #SBATCH --cpus-per-task=16
-#SBATCH --output=runs/%x/slurm_%j.out
-#SBATCH --error=runs/%x/slurm_%j.err
+#SBATCH --output=/gpfs/commons/groups/sanjana_lab/Cas13/TIGER/runs/%x/slurm_%j.out
+#SBATCH --error=/gpfs/commons/groups/sanjana_lab/Cas13/TIGER/runs/%x/slurm_%j.err
 
 # TIGER Workflow SLURM Submission Script
 # =======================================
@@ -26,15 +26,18 @@ echo "Start Time: $(date)"
 echo "=========================================="
 echo
 
-# Get root directory
-ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+# Get root directory - use hardcoded path for SLURM jobs
+ROOT_DIR="/gpfs/commons/groups/sanjana_lab/Cas13/TIGER"
 cd "$ROOT_DIR"
 
+echo "Root Directory: $ROOT_DIR"
+echo "Working Directory: $(pwd)"
+echo "User: $(whoami)"
+
 # Create output directory based on job name
-OUTPUT_DIR="runs/${SLURM_JOB_NAME}"
+OUTPUT_DIR="${ROOT_DIR}/runs/${SLURM_JOB_NAME}"
 mkdir -p "$OUTPUT_DIR"
 
-echo "Root Directory: $ROOT_DIR"
 echo "Output Directory: $OUTPUT_DIR"
 echo "Arguments: $@"
 echo

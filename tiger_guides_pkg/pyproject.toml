@@ -51,3 +51,8 @@ tiger_guides = [
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
+markers = [
+  "integration: Integration tests that may require external resources",
+  "network: Tests that require network access",
+  "slow: Slow-running tests"
+]
