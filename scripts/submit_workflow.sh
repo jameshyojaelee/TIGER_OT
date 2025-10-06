@@ -1,6 +1,5 @@
 #!/bin/bash
-#SBATCH --account=sanjana
-#SBATCH --partition=cpu
+#SBATCH --account=nslab
 #SBATCH --time=16:00:00
 #SBATCH --mem=200G
 #SBATCH --cpus-per-task=16
