@@ -178,6 +178,7 @@ The repository includes 10 pre-validated mouse NT guides in `examples/targets/NT
 ## Documentation & Support
 
 - `docs/WORKFLOW_GUIDE.md` – exhaustive playbook with configuration detail.
+- `docs/GUIDE_SELECTION_AND_VALIDATION.md` – guide selection process, off-target analysis, and transcript-level validation.
 - `docs/WORKFLOW_STATUS.txt` – latest validation snapshot.
 - `docs/UPDATE_SUMMARY.txt` – change log.
 
