@@ -45,6 +45,9 @@ bin/offtarget_search
 resources/reference/*.fa
 resources/reference/*.uc.joined
 
+#slurm jobs
+slurm_jobs/
+
 # Temporary files
 *.tmp
 *.bak
