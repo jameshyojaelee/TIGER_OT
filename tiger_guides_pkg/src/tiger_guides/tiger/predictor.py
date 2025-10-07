@@ -3,7 +3,15 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from Bio import SeqIO
-import tensorflow as tf
+
+try:
+    import tensorflow as tf
+except ModuleNotFoundError as exc:  # pragma: no cover - import-time guard
+    raise ModuleNotFoundError(
+        "TensorFlow is required to run TIGER predictions. "
+        "Install an appropriate TensorFlow build (e.g. 'pip install tensorflow-cpu>=2.18,<2.21' on Linux "
+        "or 'pip install tensorflow-macos' on Apple Silicon)."
+    ) from exc
 
 from ..tiger_core import tiger as tiger_module
 

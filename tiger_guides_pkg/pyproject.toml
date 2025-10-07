@@ -16,7 +16,8 @@ dependencies = [
   "numpy>=1.26",
   "biopython>=1.85",
   "tqdm>=4.67",
-  "requests>=2.32"
+  "requests>=2.32",
+  "tensorflow-cpu>=2.18,<2.21; platform_system == \"Linux\"",
 ]
 
 [project.optional-dependencies]
