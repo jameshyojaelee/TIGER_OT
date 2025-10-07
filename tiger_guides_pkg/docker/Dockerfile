@@ -10,9 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /tmp/tiger_guides
 COPY c/offtarget/ c/offtarget/
-RUN make -C c/offtarget \
+RUN cd c/offtarget \
+    && gcc -O3 -Wall -Wextra -o offtarget_search search.c \
     && mkdir -p /opt/tiger_guides/bin \
-    && cp c/offtarget/offtarget_search /opt/tiger_guides/bin/offtarget_search
+    && cp offtarget_search /opt/tiger_guides/bin/offtarget_search \
+    && chmod +x /opt/tiger_guides/bin/offtarget_search
 
 # -----------------------------------------------------------------------------
 # Stage 2 — Package install & runtime image
