@@ -1,7 +1,7 @@
 # Makefile for off-target search
 
 CC = gcc
-CFLAGS = -O3 -march=native -Wall -Wextra
+CFLAGS = -O3 -march=native -Wall -Wextra -fopenmp -mavx2
 TARGET = ../../../bin/offtarget_search
 SRC = search.c
 

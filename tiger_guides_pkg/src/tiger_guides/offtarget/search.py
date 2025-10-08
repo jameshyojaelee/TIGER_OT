@@ -1,16 +1,18 @@
 """
 Python wrapper for C off-target search
 """
+import os
 import subprocess
 import pandas as pd
 from pathlib import Path
 import tempfile
 import shutil
 
+
 class OffTargetSearcher:
     """Wrapper for C off-target search binary"""
     
-    def __init__(self, binary_path, reference_path, logger=None):
+    def __init__(self, binary_path, reference_path, logger=None, threads=None):
         """
         Initialize off-target searcher
         
@@ -18,10 +20,12 @@ class OffTargetSearcher:
             binary_path: Path to compiled C binary
             reference_path: Path to reference transcriptome
             logger: Optional logger
+            threads: Optional thread override passed to the binary
         """
         self.binary_path = Path(binary_path)
         self.reference_path = Path(reference_path)
         self.logger = logger
+        self.threads = threads
         
         # Check if binary exists
         if not self.binary_path.exists():
@@ -102,11 +106,16 @@ class OffTargetSearcher:
                 tmp_output
             ]
 
+            env = os.environ.copy()
+            if self.threads:
+                env["TIGER_OFFTARGET_THREADS"] = str(self.threads)
+
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                env=env
             )
 
             if self.logger and result.stderr:

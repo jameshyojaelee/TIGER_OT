@@ -234,6 +234,7 @@ class WorkflowRunner:
             binary_path=binary_path,
             reference_path=reference_path,
             logger=self.logger,
+            threads=self.config.get("compute", {}).get("threads"),
         )
 
         results_df = self.offtarget.search(
