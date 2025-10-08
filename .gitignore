@@ -10,7 +10,9 @@ build/
 *.whl
 
 # Virtual Environment
+.venv/
 venv/
+vendor/
 vendor/venv_packages/
 env/
 ENV/
