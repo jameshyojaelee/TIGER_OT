@@ -394,3 +394,14 @@ if run_button:
                 st.caption(
                     "Latency and memory figures are measured locally during inference; rerun after tweaking batch size or contexts to compare."
                 )
+
+st.markdown("""
+---
+**Maintainer**  
+James Lee – New York Genome Center · sanjana lab
+
+**Cite TIGER**  
+Wessels, H.-H.*, Stirn, A.*, Méndez-Mancilla, A., Kim, E. J., Hart, S. K., Knowles, D. A.#, & Sanjana, N. E.#  
+Prediction of on-target and off-target activity of CRISPR–Cas13d guide RNAs using deep learning. *Nature Biotechnology* (2023).  
+[https://doi.org/10.1038/s41587-023-01830-8](https://doi.org/10.1038/s41587-023-01830-8)
+""")
