@@ -162,5 +162,3 @@ The launcher wraps `scripts/00_load_environment.sh`, purges conflicting modules,
 - `docs/GUIDE_SELECTION_AND_VALIDATION.md` – MM0/MM1/MM2 interpretation and transcript-level validation walkthrough.
 - `docs/WORKFLOW_STATUS.txt` – Current validation snapshot.
 - `docs/UPDATE_SUMMARY.txt` – Recent changes and upgrade notes.
-
-Questions or issues? Open a ticket in the lab tracker or message the TIGER maintainers on Slack.
