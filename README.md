@@ -162,3 +162,8 @@ The launcher wraps `scripts/00_load_environment.sh`, purges conflicting modules,
 - `docs/GUIDE_SELECTION_AND_VALIDATION.md` – MM0/MM1/MM2 interpretation and transcript-level validation walkthrough.
 - `docs/WORKFLOW_STATUS.txt` – Current validation snapshot.
 - `docs/UPDATE_SUMMARY.txt` – Recent changes and upgrade notes.
+
+
+## Cite TIGER
+
+Prediction of on-target and off-target activity of CRISPR–Cas13d guide RNAs using deep learning. Wessels, H.-H.*, Stirn, A.*, Méndez-Mancilla, A., Kim, E. J., Hart, S. K., Knowles, D. A.#, & Sanjana, N. E.# Nature Biotechnology (2023). https://doi.org/10.1038/s41587-023-01830-8

@@ -221,28 +221,28 @@ left, right = st.columns([1.2, 0.8], gap="large")
 
 with left:
     st.subheader("1. Provide coding sequences")
-    tabs = st.tabs(["📤 Upload FASTA", "📝 Paste FASTA", "🔎 Gene lookup"])
+    tabs = st.tabs(["🔎 Gene lookup", "📤 Upload FASTA", "📝 Paste FASTA"])
 
     with tabs[0]:
-        uploaded = st.file_uploader(
-            "Upload a FASTA containing CDS sequences for one or more genes.",
-            type=["fasta", "fa", "fna", "txt"],
-            accept_multiple_files=False,
-            help="Sequences should already be CDS (coding) and named in the FASTA headers.",
-        )
-    with tabs[1]:
-        pasted = st.text_area(
-            "Paste FASTA-formatted sequences",
-            height=220,
-            placeholder=">MyGene\nATGC...",
-        )
-    with tabs[2]:
         gene_input = st.text_area(
             "Enter gene symbols (one per line)",
             height=220,
             placeholder="Nanog\nSox2",
         )
         st.caption("Use HGNC (human) or MGI (mouse) symbols; resolve species on the right.")
+    with tabs[1]:
+        uploaded = st.file_uploader(
+            "Upload a FASTA containing CDS sequences for one or more genes.",
+            type=["fasta", "fa", "fna", "txt"],
+            accept_multiple_files=False,
+            help="Sequences should already be CDS (coding) and named in the FASTA headers.",
+        )
+    with tabs[2]:
+        pasted = st.text_area(
+            "Paste FASTA-formatted sequences",
+            height=220,
+            placeholder=">MyGene\nATGC...",
+        )
 
     use_sample = False
     if SAMPLE_FASTA.exists():
