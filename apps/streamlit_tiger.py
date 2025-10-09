@@ -44,7 +44,7 @@ from tiger_guides.tiger.predictor import TIGERPredictor
 from tiger_guides.download.ensembl import EnsemblDownloader
 
 st.set_page_config(
-    page_title="Sanjana Lab TIGER Guide Designer",
+    page_title="Sanjana Lab Cas13 Guide Designer",
     layout="wide",
 )
 
