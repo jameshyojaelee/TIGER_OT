@@ -207,7 +207,7 @@ default_species_index = species_keys.index("human") if "human" in species_keys e
 st.markdown(
     """
     <div class="tiger-hero">
-        <h1>Sanjana Lab TIGER Guide Designer</h1>
+        <h1>Sanjana Lab Cas13 Guide Designer</h1>
         <p>
             Curate FASTA sequences, trigger the TIGER scoring engine, and explore ranked Cas13 guides instantly.
             Drop in your transcripts, tweak scoring knobs, and download polished outputs without waiting on the full HPC pipeline.
