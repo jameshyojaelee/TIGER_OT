@@ -398,7 +398,7 @@ if run_button:
 st.markdown("""
 ---
 **Maintainer**  
-James Lee – New York Genome Center · sanjana lab
+James Lee – New York Genome Center · Sanjana lab
 
 **Cite TIGER**  
 Wessels, H.-H.*, Stirn, A.*, Méndez-Mancilla, A., Kim, E. J., Hart, S. K., Knowles, D. A.#, & Sanjana, N. E.#  
