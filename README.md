@@ -167,3 +167,57 @@ The launcher wraps `scripts/00_load_environment.sh`, purges conflicting modules,
 ## Cite TIGER
 
 Prediction of on-target and off-target activity of CRISPR–Cas13d guide RNAs using deep learning. Wessels, H.-H.*, Stirn, A.*, Méndez-Mancilla, A., Kim, E. J., Hart, S. K., Knowles, D. A.#, & Sanjana, N. E.# Nature Biotechnology (2023). https://doi.org/10.1038/s41587-023-01830-8
+
+## Off-Target Workflow: Differences vs Original Code
+
+- Original source reference: `/gpfs/commons/groups/sanjana_lab/oahmed/naive_guide_to_ref_code/`
+
+What changed compared to the original C programs (`guide_to_ref_cas13*`)?
+
+- Search engine and I/O
+  - Original: memory-maps a preprocessed reference string with `X` sentinels between transcripts and requires three inputs: joined reference, query file (one sequence per line, batches of 5), and a mapping file (seq→gene or seq→transcript). Outputs per-query counts and a pipe-delimited list of MM0 gene/transcript names.
+  - Ours: C binary `bin/offtarget_search` reads a CSV with `Gene,Sequence` and a standard FASTA transcriptome. Outputs one row per guide with `MM0..MM5` plus `MM0_Transcripts` and `MM0_Genes` (pipe-delimited). Wrapper merges counts back onto the TIGER guides by `Gene` and `Sequence`.
+
+- Parallelism and batching
+  - Original: fixed 5-query SIMD “pipeline”; users split queries manually (e.g., 1,500 per file) and manage SLURM scripts.
+  - Ours: AVX2 + OpenMP in C (thread override via `TIGER_OFFTARGET_THREADS`) and Python-side chunking/SLURM helpers. No multiple-of-5 requirement; arbitrary guide counts are supported.
+
+- Query length handling
+  - Original: effectively hard-coded to 23 nt (see fixed mask/popcount for 23 bases).
+  - Ours: supports variable lengths up to 30 nt, masking comparisons by actual guide length.
+
+- Boundary handling over concatenated reference
+  - Original: tracks `in_seq` state and increments sequence index when encountering `X` sentinels during scanning.
+  - Ours: precomputes a boolean array of valid start positions requiring `max_guide_len` non-`X` bases, avoiding partial overlaps across sentinels.
+
+- MM0 locations (where perfect matches occur)
+  - Original: directly collects gene/transcript names for MM0 hits during the scan using the provided mapping file; writes them to output.
+  - Ours: the C pass now emits the same information (pipe-delimited transcript + gene columns) without requiring external mapping files. The optional Python validation step (`mm0_location_analysis.csv`) still provides deeper summaries (same-gene vs cross-gene breakdowns) on the filtered guide set.
+
+- Filtering and ranking logic (new)
+  - Adaptive MM0 per gene with tolerance: keep guides with `MM0` in `[min_MM0, min_MM0 + tolerance]` (configurable, default 3). This balances specificity vs availability when genes have many isoforms.
+  - Enforce `MM1 <= threshold` and `MM2 <= threshold` (defaults 0) and `MM0 >= 1`.
+  - Rank by TIGER score and select top-N per gene (configurable).
+
+- Orchestration and species awareness
+  - Original: standalone binaries and manual preprocessing of inputs (join references, make mapping files, split queries, write SLURM).
+  - Ours: a single CLI runs download → TIGER scoring → off-target search → adaptive filtering with species-specific transcriptomes and resume-from checkpoints.
+
+Key implementation touchpoints in this repo
+
+- C off-target search: `src/lib/offtarget/search.c:1` (AVX2 + OpenMP counting of MM0..MM5 with variable-length masking and sentinel-aware valid windows)
+- Python wrapper: `tiger_guides_pkg/src/tiger_guides/offtarget/search.py:1` (chunking, SLURM array helper, merge results)
+- Filtering logic: `tiger_guides_pkg/src/tiger_guides/filters/ranking.py:1` (MM1/MM2 thresholds, `MM0>=1`, adaptive MM0 tolerance, top-N per gene)
+- Workflow runner: `tiger_guides_pkg/src/tiger_guides/workflow/runner.py:1` (end-to-end orchestration and config wiring)
+- MM0 location validation (optional): `tiger_guides_pkg/src/tiger_guides/tiger/validation.py:1`
+
+Notes on behavioral differences
+
+- Output schema now mirrors the legacy format (counts + MM0 transcript/gene columns) while remaining compatible with downstream filtering.
+- No manual batching constraints; guide counts need not be multiple of 5.
+- Defaults prioritize specificity (`MM1=0`, `MM2=0`) with a configurable, adaptive MM0 window.
+
+Original code pointers for comparison
+
+- Binaries and sources: `/gpfs/commons/groups/sanjana_lab/oahmed/naive_guide_to_ref_code/src` (e.g., `guide_to_ref_cas13_with_transcripts.c`, `guide_to_ref_cas13_with_genes.c`)
+- Usage and preprocessing docs: `/gpfs/commons/groups/sanjana_lab/oahmed/naive_guide_to_ref_code/track_dataset_v2` and `track_dataset_v3`

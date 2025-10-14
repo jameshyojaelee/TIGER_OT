@@ -7,7 +7,7 @@
  *   Gene,Sequence
  *
  * Results are written in the same order as input with columns:
- *   Gene,Sequence,MM0,MM1,MM2,MM3,MM4,MM5
+ *   Gene,Sequence,MM0,MM1,MM2,MM3,MM4,MM5,MM0_Transcripts,MM0_Genes
  */
 
 #include <stdio.h>
@@ -41,7 +41,22 @@ typedef struct {
 
 typedef struct {
     uint64_t counts[MAX_MISMATCHES + 1];
+    size_t *mm0_transcripts;
+    size_t mm0_count;
 } GuideResult;
+
+typedef struct {
+    size_t start;
+    size_t length;
+    char *transcript_id;
+    char *gene_symbol;
+} TranscriptInfo;
+
+typedef struct {
+    size_t *data;
+    size_t count;
+    size_t capacity;
+} HitList;
 
 typedef struct {
     char *data;
@@ -92,6 +107,126 @@ static void append_sentinel(Buffer *buf) {
     for (int i = 0; i < PAD_WIDTH; ++i) {
         buf->data[buf->length++] = SENTINEL_CHAR;
     }
+}
+
+static char *xstrdup(const char *s) {
+    if (!s) {
+        return NULL;
+    }
+    size_t len = strlen(s);
+    char *copy = (char *)xmalloc(len + 1);
+    memcpy(copy, s, len + 1);
+    return copy;
+}
+
+static char *trim_whitespace_inplace(char *s) {
+    if (!s) {
+        return s;
+    }
+    while (*s && isspace((unsigned char)*s)) {
+        ++s;
+    }
+    char *end = s + strlen(s);
+    while (end > s && isspace((unsigned char)*(end - 1))) {
+        --end;
+    }
+    *end = '\0';
+    return s;
+}
+
+static void parse_fasta_header(const char *line, char **transcript_id_out, char **gene_symbol_out) {
+    char *buffer = xstrdup(line[0] == '>' ? line + 1 : line);
+    size_t len = strlen(buffer);
+    while (len > 0 && (buffer[len - 1] == '\n' || buffer[len - 1] == '\r')) {
+        buffer[--len] = '\0';
+    }
+
+    char *saveptr = NULL;
+    char *token = strtok_r(buffer, "|", &saveptr);
+    char *transcript_id = NULL;
+    char *gene_symbol = NULL;
+    int index = 0;
+
+    while (token) {
+        char *clean = trim_whitespace_inplace(token);
+        if (index == 0 && !transcript_id) {
+            transcript_id = xstrdup(clean);
+        } else if (index == 5 && !gene_symbol) {
+            gene_symbol = xstrdup(clean);
+        }
+        token = strtok_r(NULL, "|", &saveptr);
+        ++index;
+    }
+
+    if (!transcript_id) {
+        transcript_id = xstrdup("UNKNOWN");
+    }
+    if (!gene_symbol) {
+        gene_symbol = xstrdup("Unknown");
+    }
+
+    *transcript_id_out = transcript_id;
+    *gene_symbol_out = gene_symbol;
+
+    free(buffer);
+}
+
+static void hitlist_init(HitList *list) {
+    list->data = NULL;
+    list->count = 0;
+    list->capacity = 0;
+}
+
+static void hitlist_free(HitList *list) {
+    free(list->data);
+    list->data = NULL;
+    list->count = 0;
+    list->capacity = 0;
+}
+
+static void hitlist_add(HitList *list, size_t value) {
+    for (size_t i = 0; i < list->count; ++i) {
+        if (list->data[i] == value) {
+            return;
+        }
+    }
+
+    if (list->count == list->capacity) {
+        size_t new_capacity = list->capacity ? list->capacity * 2 : 8;
+        size_t *new_data = (size_t *)realloc(list->data, new_capacity * sizeof(size_t));
+        if (!new_data) {
+            fprintf(stderr, "Error: realloc failed while growing hit list\n");
+            free(list->data);
+            exit(EXIT_FAILURE);
+        }
+        list->data = new_data;
+        list->capacity = new_capacity;
+    }
+
+    list->data[list->count++] = value;
+}
+
+static void free_transcript_info(TranscriptInfo *transcripts, size_t count) {
+    if (!transcripts) {
+        return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        free(transcripts[i].transcript_id);
+        free(transcripts[i].gene_symbol);
+    }
+    free(transcripts);
+}
+
+static void free_results(GuideResult *results, size_t count) {
+    if (!results) {
+        return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        free(results[i].mm0_transcripts);
+        results[i].mm0_transcripts = NULL;
+        results[i].mm0_count = 0;
+    }
+    free(results);
 }
 
 static inline char normalize_base(char c) {
@@ -244,7 +379,7 @@ static int load_guides(const char *filename, Guide **guides_out, int *max_len_ou
     return count;
 }
 
-static Buffer load_reference_sequence(const char *filename) {
+static Buffer load_reference_sequence(const char *filename, TranscriptInfo **transcripts_out, size_t *transcript_count_out) {
     FILE *fp = fopen(filename, "r");
     if (!fp) {
         fprintf(stderr, "Error: unable to open reference file '%s': %s\n", filename, strerror(errno));
@@ -253,6 +388,11 @@ static Buffer load_reference_sequence(const char *filename) {
 
     Buffer buffer;
     buffer_init(&buffer, 1024 * 1024);
+
+    size_t capacity = 1024;
+    TranscriptInfo *transcripts = (TranscriptInfo *)xmalloc(capacity * sizeof(TranscriptInfo));
+    size_t transcript_count = 0;
+    TranscriptInfo *current = NULL;
 
     char *line = NULL;
     size_t linecap = 0;
@@ -265,10 +405,36 @@ static Buffer load_reference_sequence(const char *filename) {
         }
 
         if (line[0] == '>') {
-            if (!first_sequence) {
+            if (!first_sequence && current) {
+                current->length = buffer.length - current->start;
                 append_sentinel(&buffer);
             }
             first_sequence = false;
+
+            if (transcript_count == capacity) {
+                capacity *= 2;
+                TranscriptInfo *tmp = (TranscriptInfo *)realloc(transcripts, capacity * sizeof(TranscriptInfo));
+                if (!tmp) {
+                    fprintf(stderr, "Error: realloc failed while growing transcript metadata\n");
+                    free(transcripts);
+                    exit(EXIT_FAILURE);
+                }
+                transcripts = tmp;
+            }
+
+            char *transcript_id = NULL;
+            char *gene_symbol = NULL;
+            parse_fasta_header(line, &transcript_id, &gene_symbol);
+
+            current = &transcripts[transcript_count++];
+            current->start = buffer.length;
+            current->length = 0;
+            current->transcript_id = transcript_id;
+            current->gene_symbol = gene_symbol;
+            continue;
+        }
+
+        if (!current) {
             continue;
         }
 
@@ -284,13 +450,25 @@ static Buffer load_reference_sequence(const char *filename) {
     free(line);
     fclose(fp);
 
+    if (transcript_count == 0 || !current) {
+        fprintf(stderr, "Error: reference '%s' contains no sequence records\n", filename);
+        free(buffer.data);
+        free_transcript_info(transcripts, transcript_count);
+        exit(EXIT_FAILURE);
+    }
+
+    current->length = buffer.length - current->start;
+
     if (buffer.length == 0) {
         fprintf(stderr, "Error: reference '%s' contains no sequence data\n", filename);
         free(buffer.data);
+        free_transcript_info(transcripts, transcript_count);
         exit(EXIT_FAILURE);
     }
 
     append_sentinel(&buffer);  // padding to allow vector loads at the end
+    *transcripts_out = transcripts;
+    *transcript_count_out = transcript_count;
     return buffer;
 }
 
@@ -308,7 +486,9 @@ static void process_group_avx2(
     const Guide *guides,
     size_t group_start,
     size_t group_size,
-    uint64_t (*out_counts)[MAX_MISMATCHES + 1]
+    GuideResult *results,
+    const TranscriptInfo *transcripts,
+    size_t transcript_count
 ) {
     __m256i query_vec[GROUP_SIZE];
     uint32_t query_masks[GROUP_SIZE];
@@ -326,15 +506,42 @@ static void process_group_avx2(
     }
 
     uint64_t local_counts[GROUP_SIZE][MAX_MISMATCHES + 1] = {{0}};
+    HitList mm0_hits[GROUP_SIZE];
+    for (size_t j = 0; j < group_size; ++j) {
+        hitlist_init(&mm0_hits[j]);
+    }
+
+    size_t transcript_idx = 0;
+    size_t next_boundary = (transcript_count > 1) ? transcripts[1].start : search_limit;
 
     for (size_t pos = 0; pos < search_limit; ++pos) {
+        while (transcript_idx + 1 < transcript_count && pos >= next_boundary) {
+            ++transcript_idx;
+            next_boundary = (transcript_idx + 1 < transcript_count)
+                ? transcripts[transcript_idx + 1].start
+                : search_limit;
+        }
+
         if (!valid_pos[pos]) {
+            continue;
+        }
+
+        const TranscriptInfo *tinfo = &transcripts[transcript_idx];
+        if (pos < tinfo->start) {
+            continue;
+        }
+        size_t transcript_end = tinfo->start + tinfo->length;
+        if (pos >= transcript_end) {
             continue;
         }
 
         __m256i ref_vec = _mm256_loadu_si256((const __m256i *)(ref_seq + pos));
 
         for (size_t j = 0; j < group_size; ++j) {
+            if (pos + (size_t)query_lengths[j] > transcript_end) {
+                continue;
+            }
+
             __m256i cmp = _mm256_cmpeq_epi8(ref_vec, query_vec[j]);
             uint32_t eq_mask = (uint32_t)_mm256_movemask_epi8(cmp);
             eq_mask &= query_masks[j];
@@ -344,14 +551,29 @@ static void process_group_avx2(
 
             if (mismatches <= MAX_MISMATCHES) {
                 local_counts[j][mismatches]++;
+                if (mismatches == 0) {
+                    hitlist_add(&mm0_hits[j], transcript_idx);
+                }
             }
         }
     }
 
     for (size_t j = 0; j < group_size; ++j) {
+        GuideResult *res = &results[group_start + j];
         for (int mm = 0; mm <= MAX_MISMATCHES; ++mm) {
-            out_counts[j][mm] = local_counts[j][mm];
+            res->counts[mm] = local_counts[j][mm];
         }
+
+        if (mm0_hits[j].count > 0) {
+            res->mm0_transcripts = (size_t *)xmalloc(mm0_hits[j].count * sizeof(size_t));
+            memcpy(res->mm0_transcripts, mm0_hits[j].data, mm0_hits[j].count * sizeof(size_t));
+            res->mm0_count = mm0_hits[j].count;
+        } else {
+            res->mm0_transcripts = NULL;
+            res->mm0_count = 0;
+        }
+
+        hitlist_free(&mm0_hits[j]);
     }
 }
 
@@ -362,17 +584,46 @@ static void process_group_scalar(
     const Guide *guides,
     size_t group_start,
     size_t group_size,
-    uint64_t (*out_counts)[MAX_MISMATCHES + 1]
+    GuideResult *results,
+    const TranscriptInfo *transcripts,
+    size_t transcript_count
 ) {
     uint64_t local_counts[GROUP_SIZE][MAX_MISMATCHES + 1] = {{0}};
+    HitList mm0_hits[GROUP_SIZE];
+    for (size_t j = 0; j < group_size; ++j) {
+        hitlist_init(&mm0_hits[j]);
+    }
+
+    size_t transcript_idx = 0;
+    size_t next_boundary = (transcript_count > 1) ? transcripts[1].start : search_limit;
 
     for (size_t pos = 0; pos < search_limit; ++pos) {
+        while (transcript_idx + 1 < transcript_count && pos >= next_boundary) {
+            ++transcript_idx;
+            next_boundary = (transcript_idx + 1 < transcript_count)
+                ? transcripts[transcript_idx + 1].start
+                : search_limit;
+        }
+
         if (!valid_pos[pos]) {
+            continue;
+        }
+
+        const TranscriptInfo *tinfo = &transcripts[transcript_idx];
+        if (pos < tinfo->start) {
+            continue;
+        }
+        size_t transcript_end = tinfo->start + tinfo->length;
+        if (pos >= transcript_end) {
             continue;
         }
 
         for (size_t j = 0; j < group_size; ++j) {
             const Guide *g = &guides[group_start + j];
+            if (pos + (size_t)g->length > transcript_end) {
+                continue;
+            }
+
             int mismatches = 0;
             for (int k = 0; k < g->length; ++k) {
                 if (ref_seq[pos + k] != g->sequence[k]) {
@@ -384,14 +635,29 @@ static void process_group_scalar(
             }
             if (mismatches <= MAX_MISMATCHES) {
                 local_counts[j][mismatches]++;
+                if (mismatches == 0) {
+                    hitlist_add(&mm0_hits[j], transcript_idx);
+                }
             }
         }
     }
 
     for (size_t j = 0; j < group_size; ++j) {
+        GuideResult *res = &results[group_start + j];
         for (int mm = 0; mm <= MAX_MISMATCHES; ++mm) {
-            out_counts[j][mm] = local_counts[j][mm];
+            res->counts[mm] = local_counts[j][mm];
         }
+
+        if (mm0_hits[j].count > 0) {
+            res->mm0_transcripts = (size_t *)xmalloc(mm0_hits[j].count * sizeof(size_t));
+            memcpy(res->mm0_transcripts, mm0_hits[j].data, mm0_hits[j].count * sizeof(size_t));
+            res->mm0_count = mm0_hits[j].count;
+        } else {
+            res->mm0_transcripts = NULL;
+            res->mm0_count = 0;
+        }
+
+        hitlist_free(&mm0_hits[j]);
     }
 }
 
@@ -412,7 +678,9 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    Buffer reference = load_reference_sequence(reference_file);
+    TranscriptInfo *transcripts = NULL;
+    size_t transcript_count = 0;
+    Buffer reference = load_reference_sequence(reference_file, &transcripts, &transcript_count);
     if (max_guide_len > MAX_GUIDE_LEN) {
         max_guide_len = MAX_GUIDE_LEN;
     }
@@ -424,9 +692,7 @@ int main(int argc, char *argv[]) {
     }
 
     GuideResult *results = (GuideResult *)xmalloc((size_t)n_guides * sizeof(GuideResult));
-    for (int i = 0; i < n_guides; ++i) {
-        memset(results[i].counts, 0, sizeof(results[i].counts));
-    }
+    memset(results, 0, (size_t)n_guides * sizeof(GuideResult));
 
     int requested_threads = parse_thread_override();
     if (requested_threads > 0) {
@@ -449,22 +715,14 @@ int main(int argc, char *argv[]) {
         size_t remaining = (size_t)n_guides - start;
         size_t group_size = remaining < GROUP_SIZE ? remaining : GROUP_SIZE;
 
-        uint64_t local_counts[GROUP_SIZE][MAX_MISMATCHES + 1];
-        memset(local_counts, 0, sizeof(local_counts));
-
         if (use_avx2) {
             process_group_avx2(reference.data, valid_positions, search_limit,
-                               guides, start, group_size, local_counts);
+                               guides, start, group_size, results,
+                               transcripts, transcript_count);
         } else {
             process_group_scalar(reference.data, valid_positions, search_limit,
-                                 guides, start, group_size, local_counts);
-        }
-
-        for (size_t j = 0; j < group_size; ++j) {
-            GuideResult *res = &results[start + j];
-            for (int mm = 0; mm <= MAX_MISMATCHES; ++mm) {
-                res->counts[mm] = local_counts[j][mm];
-            }
+                                 guides, start, group_size, results,
+                                 transcripts, transcript_count);
         }
     }
 
@@ -474,16 +732,65 @@ int main(int argc, char *argv[]) {
         free(valid_positions);
         free(reference.data);
         free(guides);
-        free(results);
+        free_results(results, (size_t)n_guides);
+        free_transcript_info(transcripts, transcript_count);
         return EXIT_FAILURE;
     }
 
-    fprintf(out, "Gene,Sequence,MM0,MM1,MM2,MM3,MM4,MM5\n");
+    fprintf(out, "Gene,Sequence,MM0,MM1,MM2,MM3,MM4,MM5,MM0_Transcripts,MM0_Genes\n");
     for (int i = 0; i < n_guides; ++i) {
+        GuideResult *res = &results[i];
         fprintf(out, "%s,%s", guides[i].gene, guides[i].sequence);
         for (int mm = 0; mm <= MAX_MISMATCHES; ++mm) {
-            fprintf(out, ",%llu", (unsigned long long)results[i].counts[mm]);
+            fprintf(out, ",%llu", (unsigned long long)res->counts[mm]);
         }
+
+        fputc(',', out);
+        if (res->mm0_count > 0) {
+            size_t printed = 0;
+            for (size_t idx = 0; idx < res->mm0_count; ++idx) {
+                size_t t_idx = res->mm0_transcripts[idx];
+                if (t_idx >= transcript_count) {
+                    continue;
+                }
+                if (printed > 0) {
+                    fputc('|', out);
+                }
+                fputs(transcripts[t_idx].transcript_id, out);
+                ++printed;
+            }
+        }
+
+        fputc(',', out);
+        if (res->mm0_count > 0) {
+            const char **gene_list = (const char **)xmalloc(res->mm0_count * sizeof(char *));
+            size_t gene_count = 0;
+            for (size_t idx = 0; idx < res->mm0_count; ++idx) {
+                size_t t_idx = res->mm0_transcripts[idx];
+                if (t_idx >= transcript_count) {
+                    continue;
+                }
+                const char *gene = transcripts[t_idx].gene_symbol ? transcripts[t_idx].gene_symbol : "Unknown";
+                bool seen = false;
+                for (size_t g = 0; g < gene_count; ++g) {
+                    if (strcmp(gene_list[g], gene) == 0) {
+                        seen = true;
+                        break;
+                    }
+                }
+                if (!seen) {
+                    gene_list[gene_count++] = gene;
+                }
+            }
+            for (size_t g = 0; g < gene_count; ++g) {
+                if (g > 0) {
+                    fputc('|', out);
+                }
+                fputs(gene_list[g], out);
+            }
+            free((void *)gene_list);
+        }
+
         fputc('\n', out);
     }
 
@@ -491,6 +798,7 @@ int main(int argc, char *argv[]) {
     free(valid_positions);
     free(reference.data);
     free(guides);
-    free(results);
+    free_results(results, (size_t)n_guides);
+    free_transcript_info(transcripts, transcript_count);
     return EXIT_SUCCESS;
 }

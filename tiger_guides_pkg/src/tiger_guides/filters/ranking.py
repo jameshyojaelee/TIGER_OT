@@ -59,6 +59,23 @@ def apply_filters(guides: pd.DataFrame, config: Dict, logger=None) -> Tuple[pd.D
     )
     stats["final"] = len(ranked)
 
+    # Keep MM0 transcript/gene columns intact for downstream consumers
+    for col in ("MM0_Transcripts", "MM0_Genes"):
+        if col in ranked.columns:
+            ranked[col] = ranked[col].fillna("")
+
+    # Prefer a consistent column order when optional metadata is present
+    preferred = ["Gene"]
+    if "Sequence" in ranked.columns:
+        preferred.append("Sequence")
+    if "Target" in ranked.columns and "Target" not in preferred:
+        preferred.append("Target")
+    for extra in ["Score", "MM0", "MM1", "MM2", "MM3", "MM4", "MM5", "MM0_Transcripts", "MM0_Genes"]:
+        if extra in ranked.columns and extra not in preferred:
+            preferred.append(extra)
+    ordered = preferred + [col for col in ranked.columns if col not in preferred]
+    ranked = ranked[ordered]
+
     return ranked, stats
 
 

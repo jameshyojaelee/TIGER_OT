@@ -129,12 +129,17 @@ class OffTargetSearcher:
             if search_col == 'Target':
                 results_df = results_df.rename(columns={'Sequence': 'Target'})
 
-            # Merge with original guide data
+            # Merge with original guide data and preserve new metadata columns
             merged = guides_df.merge(
                 results_df,
                 on=['Gene', search_col],
                 how='left'
             )
+
+            # Ensure transcript metadata columns survive downstream filtering
+            for col in ("MM0_Transcripts", "MM0_Genes"):
+                if col in merged.columns:
+                    merged[col] = merged[col].fillna("")
 
             return merged
         
