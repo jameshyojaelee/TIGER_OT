@@ -49,6 +49,7 @@ tiger_guides = [
   "data/**/*.uc.joined",
   "tiger_core/*.py",
   "tiger/*.py",
+  "resources/**/*",
 ]
 
 [tool.pytest.ini_options]
