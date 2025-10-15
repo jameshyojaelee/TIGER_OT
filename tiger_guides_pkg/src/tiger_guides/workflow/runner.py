@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import shutil
+from importlib import resources
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
@@ -213,9 +214,40 @@ class WorkflowRunner:
         guides_df = pd.read_csv(tiger_output)
 
         offtarget_cfg = self.config["offtarget"]
-        binary_path = Path(offtarget_cfg.get("binary_path", "bin/offtarget_search"))
-        if not binary_path.is_absolute():
-            binary_path = (self.root / binary_path).resolve()
+        binary_cfg = Path(offtarget_cfg.get("binary_path", "bin/offtarget_search"))
+        candidate_paths = []
+
+        if binary_cfg.is_absolute():
+            candidate_paths.append(binary_cfg)
+        else:
+            candidate_paths.append((self.root / binary_cfg).resolve())
+            candidate_paths.append(binary_cfg)
+
+        # Package resource fallbacks
+        try:
+            pkg_root = resources.files("tiger_guides")
+            resource_candidates = [
+                pkg_root / binary_cfg.name,
+                pkg_root / "resources" / binary_cfg.name,
+                pkg_root / "resources" / "bin" / binary_cfg.name,
+                pkg_root / "bin" / binary_cfg.name,
+            ]
+            for res in resource_candidates:
+                try:
+                    if res.exists():
+                        candidate_paths.append(Path(str(res)))
+                except FileNotFoundError:
+                    continue
+        except ModuleNotFoundError:
+            pass
+
+        which_path = shutil.which(binary_cfg.name)
+        if which_path:
+            candidate_paths.append(Path(which_path))
+
+        binary_path = next((path for path in candidate_paths if path.exists()), None)
+        if binary_path is None:
+            raise FileNotFoundError(f"Off-target binary not found: {binary_cfg}")
 
         reference_path = Path(offtarget_cfg["reference_transcriptome"])
         if not reference_path.is_absolute():
