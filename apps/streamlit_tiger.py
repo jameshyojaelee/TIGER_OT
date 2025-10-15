@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import io
+import os
 import sys
 import tempfile
 import time
@@ -126,10 +127,18 @@ def _validate_fasta(data: bytes) -> Tuple[int, str]:
 
 def _ensure_full_reference(species_option: SpeciesOption, reference_dir: Path) -> Path:
     """Ensure the full transcriptome is available, compatible with older installs."""
+    skip_flag = os.environ.get("TIGER_SKIP_REFERENCE_CHECKSUM", "").strip().lower() in {"1", "true", "yes", "on"}
     try:
-        return ensure_reference(species_option, reference_dir, prefer_smoke=False)
+        return ensure_reference(
+            species_option,
+            reference_dir,
+            prefer_smoke=False,
+            skip_checksum=skip_flag,
+        )
     except TypeError:
         # Older tiger_guides builds do not accept prefer_smoke; fall back to default behaviour.
+        if skip_flag:
+            return ensure_reference(species_option, reference_dir, skip_checksum=True)
         return ensure_reference(species_option, reference_dir)
 
 

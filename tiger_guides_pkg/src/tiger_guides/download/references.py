@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import gzip
+import os
 import shutil
 from pathlib import Path
 from typing import Optional
@@ -15,7 +16,18 @@ from .checksums import get_expected_checksums, verify_checksum
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
 
 
-def ensure_reference(species: SpeciesOption, cache_dir: Path, prefer_smoke: bool = True) -> Path:
+def _skip_checksum(skip_flag: bool) -> bool:
+    env_value = os.environ.get("TIGER_SKIP_REFERENCE_CHECKSUM", "").strip().lower()
+    env_skip = env_value in {"1", "true", "yes", "on"}
+    return skip_flag or env_skip
+
+
+def ensure_reference(
+    species: SpeciesOption,
+    cache_dir: Path,
+    prefer_smoke: bool = True,
+    skip_checksum: bool = False,
+) -> Path:
     """Ensure the transcriptome for ``species`` exists under ``cache_dir``.
 
     Returns the path to the transcriptome FASTA.
@@ -26,12 +38,16 @@ def ensure_reference(species: SpeciesOption, cache_dir: Path, prefer_smoke: bool
     filename = species.reference_filename
     destination = cache_dir / filename
 
+    skip_checksum = _skip_checksum(skip_checksum)
     checksums = get_expected_checksums()
 
     if destination.exists():
-        expected = checksums.get(filename)
-        if expected and not verify_checksum(destination, expected):
-            destination.unlink()
+        if not skip_checksum:
+            expected = checksums.get(filename)
+            if expected and not verify_checksum(destination, expected):
+                destination.unlink()
+            else:
+                return destination
         else:
             return destination
 
@@ -56,12 +72,13 @@ def ensure_reference(species: SpeciesOption, cache_dir: Path, prefer_smoke: bool
     else:
         download_path.rename(destination)
 
-    expected = checksums.get(filename)
-    if expected and not verify_checksum(destination, expected):
-        destination.unlink(missing_ok=True)
-        raise ValueError(
-            f"Checksum mismatch when downloading {filename}."
-        )
+    if not skip_checksum:
+        expected = checksums.get(filename)
+        if expected and not verify_checksum(destination, expected):
+            destination.unlink(missing_ok=True)
+            raise ValueError(
+                f"Checksum mismatch when downloading {filename}."
+            )
 
     return destination
 

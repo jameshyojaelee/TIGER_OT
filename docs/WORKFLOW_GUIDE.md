@@ -101,6 +101,7 @@ Behind the scenes the launcher:
 
 > Notes:
 > - `resources/reference/gencode.vM37.transcripts.uc.joined` ships as a trimmed seven-gene FASTA (Abcb11, Abhd5, Pnpla3, Pcsk9, Plin3, Plin2, Pnpla2) so smoke tests work anywhere. Replace it or update `configs/default.yaml` to a full transcriptome before production runs.
+> - If you already have a curated FASTA in place, set `TIGER_SKIP_REFERENCE_CHECKSUM=1` before running to bypass the built-in MD5 verification.
 > - Human runs expect `resources/reference/gencode.v47.transcripts.fa`. `scripts/01_setup_workspace.sh` will copy it automatically from `/gpfs/commons/home/jameslee/reference_genome/refdata-gex-GRCh38-2024-A/genome/gencode.v47.transcripts.fa.gz` when available, or you can provide your own symlink/copy.
 
 #### GPU mode
