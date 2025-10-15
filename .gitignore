@@ -47,6 +47,7 @@ bin/offtarget_search
 # Reference data (large files)
 resources/reference/*.fa
 resources/reference/*.uc.joined
+references/*.fa
 
 #slurm jobs
 slurm_jobs/
