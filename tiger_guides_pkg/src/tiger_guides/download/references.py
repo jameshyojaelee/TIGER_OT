@@ -15,7 +15,7 @@ from .checksums import get_expected_checksums, verify_checksum
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
 
 
-def ensure_reference(species: SpeciesOption, cache_dir: Path) -> Path:
+def ensure_reference(species: SpeciesOption, cache_dir: Path, prefer_smoke: bool = True) -> Path:
     """Ensure the transcriptome for ``species`` exists under ``cache_dir``.
 
     Returns the path to the transcriptome FASTA.
@@ -36,7 +36,7 @@ def ensure_reference(species: SpeciesOption, cache_dir: Path) -> Path:
             return destination
 
     # Special-case smoke dataset for mouse
-    if species.name == "mouse":
+    if prefer_smoke and species.name == "mouse":
         smoke_reference = SMOKE_DIR / "gencode.vM37.transcripts.uc.joined"
         if smoke_reference.exists():
             shutil.copy2(smoke_reference, destination)
