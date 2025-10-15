@@ -41,15 +41,19 @@ TO RUN THE WORKFLOW:
   
   # Create targets file
   cat > my_targets.txt <<EOT
-  Nanog
-  Sox2
-  Pou5f1
+  Abcb11
+  Abhd5
+  Pnpla3
+  Pcsk9
+  Plin3
+  Plin2
+  Pnpla2
   EOT
   
   # Run workflow (single-line launcher wraps the environment)
   scripts/04_run_workflow.sh my_targets.txt --species mouse
   
-  # Or use the bundled smoke test (tiny reference + sample config)
+  # Or use the bundled smoke test (trimmed seven-gene reference: Abcb11, Abhd5, Pnpla3, Pcsk9, Plin3, Plin2, Pnpla2)
   scripts/04_run_workflow.sh examples/targets/test_targets.txt --species mouse --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
   
   # Check results

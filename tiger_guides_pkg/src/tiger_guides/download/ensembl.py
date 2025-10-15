@@ -58,7 +58,7 @@ class EnsemblDownloader:
         Get Ensembl gene ID from gene symbol
         
         Args:
-            gene_name: Gene symbol (e.g., 'Nanog')
+            gene_name: Gene symbol (e.g., 'Pnpla2')
             
         Returns:
             tuple[str, str]: (Ensembl gene ID, resolved symbol) or (None, None)

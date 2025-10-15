@@ -1,5 +1,9 @@
 # Example targets file
 # Add one gene name per line
-Nanog
-Oct4
-Sox2
+Abcb11
+Abhd5
+Pnpla3
+Pcsk9
+Plin3
+Plin2
+Pnpla2

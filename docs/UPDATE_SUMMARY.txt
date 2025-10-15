@@ -53,8 +53,8 @@ BENEFITS:
 - Useful when minimum MM0 is high due to gene duplications
 
 EXAMPLE OUTPUT:
-  Nanog: MM0 range 1-4 (15 at min, 45 in range)
-  Sox2:  MM0 range 2-5 (8 at min, 28 in range)
+  Pnpla2: MM0 range 1-4 (15 at min, 45 in range)
+  Pcsk9:  MM0 range 2-5 (8 at min, 28 in range)
 
 ================================================================================
 
@@ -87,7 +87,7 @@ EXAMPLE SUMMARY:
 MOST CONCERNING GUIDES:
   Gene       Score   MM0   Other Transcripts          Hits
   Pnpla2     0.952   4     Gene1-201, Gene2-203      2
-  Sox2       0.943   3     Gene3-201                 1
+  Plin2      0.943   3     Gene3-201                 1
 
 ================================================================================
 

@@ -124,6 +124,15 @@ def _validate_fasta(data: bytes) -> Tuple[int, str]:
     return len(records), preview
 
 
+def _ensure_full_reference(species_option: SpeciesOption, reference_dir: Path) -> Path:
+    """Ensure the full transcriptome is available, compatible with older installs."""
+    try:
+        return ensure_reference(species_option, reference_dir, prefer_smoke=False)
+    except TypeError:
+        # Older tiger_guides builds do not accept prefer_smoke; fall back to default behaviour.
+        return ensure_reference(species_option, reference_dir)
+
+
 def _predict_guides(
     predictor: TIGERPredictor,
     fasta_bytes: bytes,
@@ -234,7 +243,7 @@ with left:
         gene_input = st.text_area(
             "Enter gene symbols (one per line)",
             height=220,
-            placeholder="Nanog\nSox2",
+            placeholder="Abcb11\nAbhd5\nPnpla3",
         )
         st.caption("Use HGNC (human) or MGI (mouse) symbols; resolve species on the right.")
     with tabs[1]:
@@ -253,7 +262,7 @@ with left:
 
     use_sample = False
     if SAMPLE_FASTA.exists():
-        use_sample = st.checkbox("Use bundled smoke-test FASTA (Nanog & Sox2)", value=False)
+        use_sample = st.checkbox("Use bundled smoke-test FASTA (Abcb11…Pnpla2)", value=False)
     st.caption("FASTA uploads take precedence when multiple inputs are provided. Keep runs under ~50 CDS for snappy feedback.")
 
 with right:
@@ -462,7 +471,7 @@ if isinstance(guides_df_cached, pd.DataFrame) and not guides_df_cached.empty:
 
                 with st.spinner(f"Ensuring {species_for_offtarget} transcriptome (full reference)..."):
                     try:
-                        reference_path = ensure_reference(species_option, reference_dir, prefer_smoke=False)
+                        reference_path = _ensure_full_reference(species_option, reference_dir)
                     except Exception as exc:  # pragma: no cover - network / env dependent
                         st.error(f"Failed to provision the {species_for_offtarget} transcriptome: {exc}")
                         reference_path = None

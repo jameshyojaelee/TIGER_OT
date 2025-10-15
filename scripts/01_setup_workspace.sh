@@ -141,9 +141,13 @@ echo "📄 Writing example targets to ${EXAMPLE_TARGETS}"
 cat > "$EXAMPLE_TARGETS" <<'EOF_TARGETS'
 # Example targets file
 # Add one gene name per line
-Nanog
-Oct4
-Sox2
+Abcb11
+Abhd5
+Pnpla3
+Pcsk9
+Plin3
+Plin2
+Pnpla2
 EOF_TARGETS
 
 # Quick smoke import check (non-fatal)

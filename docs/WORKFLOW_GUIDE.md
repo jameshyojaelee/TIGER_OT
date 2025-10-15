@@ -35,10 +35,13 @@ cd /gpfs/commons/groups/sanjana_lab/Cas13/TIGER
 
 # Create a targets file
 cat > my_targets.txt <<'EOF'
-Nanog
-Sox2
-Pou5f1
-Klf4
+Abcb11
+Abhd5
+Pnpla3
+Pcsk9
+Plin3
+Plin2
+Pnpla2
 EOF
 
 # Run the workflow (single-line launcher)
@@ -77,7 +80,7 @@ For a quick verification that ships with the repo, use the tiny reference + samp
 scripts/04_run_workflow.sh examples/targets/test_targets.txt --species mouse --config configs/smoke-test.yaml --output-dir runs/smoke --skip-validation
 ```
 
-Results land in `runs/smoke/final_guides.csv` and the run finishes in under a minute.
+Results land in `runs/smoke/final_guides.csv` and the run finishes in under a minute. The bundled smoke dataset targets Abcb11, Abhd5, Pnpla3, Pcsk9, Plin3, Plin2, and Pnpla2 so you can mirror the lipid-metabolism example genes out of the box.
 
 ---
 
@@ -97,7 +100,7 @@ Behind the scenes the launcher:
 - Calls `scripts/00_load_environment.sh` under the hood for advanced chaining compatibility
 
 > Notes:
-> - `resources/reference/gencode.vM37.transcripts.uc.joined` ships as a tiny two-transcript FASTA so smoke tests work anywhere. Replace it or update `configs/default.yaml` to a full transcriptome before production runs.
+> - `resources/reference/gencode.vM37.transcripts.uc.joined` ships as a trimmed seven-gene FASTA (Abcb11, Abhd5, Pnpla3, Pcsk9, Plin3, Plin2, Pnpla2) so smoke tests work anywhere. Replace it or update `configs/default.yaml` to a full transcriptome before production runs.
 > - Human runs expect `resources/reference/gencode.v47.transcripts.fa`. `scripts/01_setup_workspace.sh` will copy it automatically from `/gpfs/commons/home/jameslee/reference_genome/refdata-gex-GRCh38-2024-A/genome/gencode.v47.transcripts.fa.gz` when available, or you can provide your own symlink/copy.
 
 #### GPU mode
@@ -153,7 +156,7 @@ The script verifies executable permissions, Python availability, package imports
 ### Example Output Row
 ```csv
 Gene,Sequence,Score,Position,MM0,MM1,MM2,MM3,MM4,MM5
-Nanog,TGATCACACAGACAACCACCAGC,0.992,123,4,0,0,5,12,34
+Pnpla2,CCCGACATCTTCACCATCGGCAA,0.984,211,3,0,0,4,9,21
 ```
 
 ---
@@ -191,8 +194,8 @@ scripts/04_run_workflow.sh my_targets.txt --species mouse --verbose
 ```bash
 # Create a quick smoke-test set
 cat > test_targets.txt <<'EOF'
-Nanog
-Sox2
+Abcb11
+Pnpla2
 EOF
 
 # Execute the workflow
@@ -475,7 +478,7 @@ Workflow commands now rely solely on these bundled assets—no external TIGER ch
 ```bash
 # Single-gene test run
 cat > test.txt <<'EOF'
-Nanog
+Pnpla2
 EOF
 scripts/04_run_workflow.sh test.txt --species mouse --output-dir test_out --verbose
 cat test_out/final_guides.csv
