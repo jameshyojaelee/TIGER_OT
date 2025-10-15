@@ -8,6 +8,7 @@ import io
 import sys
 import tempfile
 import time
+from importlib import resources
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -43,8 +44,11 @@ for path in (PACKAGE_SRC, LEGACY_SRC):
 from tiger_guides.models.loader import resolve_model_paths
 from tiger_guides.tiger.predictor import TIGERPredictor
 from tiger_guides.download.ensembl import EnsemblDownloader
+from tiger_guides.download.references import ensure_reference
 from tiger_guides.offtarget.search import OffTargetSearcher
 from tiger_guides.filters.ranking import apply_filters
+from tiger_guides.config import SpeciesOption
+from tiger_guides.constants import SMOKE_DIR
 
 st.set_page_config(
     page_title="Sanjana Lab Cas13 Guide Designer",
@@ -444,138 +448,205 @@ if isinstance(guides_df_cached, pd.DataFrame) and not guides_df_cached.empty:
         if reference_entry is None:
             st.info("Select a species in the configuration panel and rerun TIGER scoring to enable off-target analysis.")
         else:
-            reference_path = Path(reference_entry.get("reference_transcriptome", ""))
-            if not reference_path.is_absolute():
-                reference_path = (PROJECT_ROOT / reference_path).resolve()
+            reference_cfg = reference_entry.get("reference_transcriptome")
+            reference_path = None
+            reference_candidates = []
 
-            binary_path = Path(offtarget_cfg.get("binary_path", "bin/offtarget_search"))
-            if not binary_path.is_absolute():
-                binary_path = (PROJECT_ROOT / binary_path).resolve()
-
-            st.caption(f"Reference: {reference_path}")
-
-            run_offtarget = st.button("🚀 Run off-target search", use_container_width=True, key="run_offtarget")
-
-            if run_offtarget:
-                if not reference_path.exists():
-                    st.error(f"Reference transcriptome not found: {reference_path}")
-                elif not binary_path.exists():
-                    st.error(f"Off-target binary not found: {binary_path}")
+            if reference_cfg:
+                cfg_path = Path(reference_cfg)
+                if cfg_path.is_absolute():
+                    reference_candidates.append(cfg_path)
                 else:
-                    try:
-                        searcher = OffTargetSearcher(
-                            binary_path=binary_path,
-                            reference_path=reference_path,
-                            logger=None,
-                            threads=compute_cfg.get("threads"),
-                        )
-                    except FileNotFoundError as exc:
-                        st.error(str(exc))
+                    reference_candidates.append((PROJECT_ROOT / cfg_path).resolve())
+                    reference_candidates.append(cfg_path)
+
+                try:
+                    pkg_root = resources.files("tiger_guides")
+                    pkg_candidates = [
+                        pkg_root / cfg_path.name,
+                        pkg_root / cfg_path,
+                        pkg_root / "resources" / cfg_path.name,
+                        pkg_root / "resources" / cfg_path,
+                        pkg_root / "resources" / "reference" / cfg_path.name,
+                    ]
+                    for res_path in pkg_candidates:
+                        try:
+                            if res_path.exists():
+                                reference_candidates.append(Path(str(res_path)))
+                        except (FileNotFoundError, AttributeError):
+                            continue
+                except ModuleNotFoundError:
+                    pass
+
+            sample_candidates = [
+                (PROJECT_ROOT / "resources/reference/sample_reference.fa").resolve(),
+                (SMOKE_DIR / "gencode.vM37.transcripts.uc.joined").resolve(),
+            ]
+
+            try:
+                pkg_root = resources.files("tiger_guides")
+                sample_candidates.extend([
+                    Path(str(pkg_root / "resources/reference/sample_reference.fa")).resolve(),
+                    Path(str(pkg_root / "data/smoke/gencode.vM37.transcripts.uc.joined")).resolve(),
+                ])
+            except ModuleNotFoundError:
+                pass
+
+            for candidate in reference_candidates + sample_candidates:
+                if candidate and candidate.exists():
+                    reference_path = candidate
+                    break
+
+            if reference_path is None and species_for_offtarget:
+                try:
+                    species_option = SpeciesOption(species_for_offtarget)
+                    reference_dir = Path(offtarget_cfg.get("reference_dir", "references"))
+                    if not reference_dir.is_absolute():
+                        reference_dir = (PROJECT_ROOT / reference_dir).resolve()
+                    reference_dir.mkdir(parents=True, exist_ok=True)
+                    with st.spinner("Downloading reference transcriptome..."):
+                        reference_path = ensure_reference(species_option, reference_dir)
+                except Exception as exc:  # pragma: no cover - network / env dependent
+                    st.warning(f"Could not automatically provision the {species_for_offtarget} transcriptome: {exc}")
+
+            if reference_path is None:
+                st.error("Reference transcriptome not available. Provide a local path in the configuration or pre-stage the resource.")
+            else:
+                try:
+                    used_sample = any(reference_path.resolve() == cand for cand in sample_candidates)
+                except Exception:  # pragma: no cover
+                    used_sample = False
+                if used_sample:
+                    st.info("Using bundled sample reference transcriptome for off-target search (limited coverage).")
+
+                binary_path = Path(offtarget_cfg.get("binary_path", "bin/offtarget_search"))
+                if not binary_path.is_absolute():
+                    binary_path = (PROJECT_ROOT / binary_path).resolve()
+
+                st.caption(f"Reference: {reference_path}")
+
+                run_offtarget = st.button("🚀 Run off-target search", use_container_width=True, key="run_offtarget")
+
+                if run_offtarget:
+                    if not reference_path.exists():
+                        st.error(f"Reference transcriptome not found: {reference_path}")
+                    elif not binary_path.exists():
+                        st.error(f"Off-target binary not found: {binary_path}")
                     else:
-                        with st.spinner("Running off-target search..."):
-                            start = time.perf_counter()
-                            results_df = searcher.search(
-                                guides_df_cached,
-                                chunk_size=offtarget_cfg.get("chunk_size"),
+                        try:
+                            searcher = OffTargetSearcher(
+                                binary_path=binary_path,
+                                reference_path=reference_path,
+                                logger=None,
+                                threads=compute_cfg.get("threads"),
                             )
-                            elapsed = time.perf_counter() - start
+                        except FileNotFoundError as exc:
+                            st.error(str(exc))
+                        else:
+                            with st.spinner("Running off-target search..."):
+                                start = time.perf_counter()
+                                results_df = searcher.search(
+                                    guides_df_cached,
+                                    chunk_size=offtarget_cfg.get("chunk_size"),
+                                )
+                                elapsed = time.perf_counter() - start
 
-                        st.session_state["offtarget_results"] = results_df
-                        st.session_state["offtarget_meta"] = {
-                            "elapsed": elapsed,
-                            "reference": str(reference_path),
-                            "species_key": species_for_offtarget,
-                        }
+                            st.session_state["offtarget_results"] = results_df
+                            st.session_state["offtarget_meta"] = {
+                                "elapsed": elapsed,
+                                "reference": str(reference_path),
+                                "species_key": species_for_offtarget,
+                            }
 
-            off_results = st.session_state.get("offtarget_results")
-            off_meta = st.session_state.get("offtarget_meta", {})
+                off_results = st.session_state.get("offtarget_results")
+                off_meta = st.session_state.get("offtarget_meta", {})
 
-            if isinstance(off_results, pd.DataFrame) and not off_results.empty:
-                elapsed = off_meta.get("elapsed")
-                ref_label = off_meta.get("reference", str(reference_path))
-                st.success(
-                    f"Off-target search completed on {len(off_results):,} guides using {ref_label}."
-                    + (f" Runtime: {elapsed:.2f} s." if elapsed is not None else "")
-                )
+                if isinstance(off_results, pd.DataFrame) and not off_results.empty:
+                    elapsed = off_meta.get("elapsed")
+                    ref_label = off_meta.get("reference", str(reference_path))
+                    st.success(
+                        f"Off-target search completed on {len(off_results):,} guides using {ref_label}."
+                        + (f" Runtime: {elapsed:.2f} s." if elapsed is not None else "")
+                    )
 
-                mm1_hits = int((off_results["MM1"] > 0).sum())
-                mm2_hits = int((off_results["MM2"] > 0).sum())
-                metric_cols = st.columns(3)
-                metric_cols[0].metric("Guides analysed", f"{len(off_results):,}")
-                metric_cols[1].metric("Guides with MM1>0", f"{mm1_hits:,}")
-                metric_cols[2].metric("Guides with MM2>0", f"{mm2_hits:,}")
+                    mm1_hits = int((off_results["MM1"] > 0).sum())
+                    mm2_hits = int((off_results["MM2"] > 0).sum())
+                    metric_cols = st.columns(3)
+                    metric_cols[0].metric("Guides analysed", f"{len(off_results):,}")
+                    metric_cols[1].metric("Guides with MM1>0", f"{mm1_hits:,}")
+                    metric_cols[2].metric("Guides with MM2>0", f"{mm2_hits:,}")
 
-                important_cols = [
-                    col for col in [
-                        "Gene",
-                        "Sequence",
-                        "Target" if "Target" in off_results.columns else None,
-                        "Score",
-                        "MM0",
-                        "MM1",
-                        "MM2",
-                        "MM0_Transcripts",
-                        "MM0_Genes",
+                    important_cols = [
+                        col for col in [
+                            "Gene",
+                            "Sequence",
+                            "Target" if "Target" in off_results.columns else None,
+                            "Score",
+                            "MM0",
+                            "MM1",
+                            "MM2",
+                            "MM0_Transcripts",
+                            "MM0_Genes",
+                        ]
+                        if col in off_results.columns
                     ]
-                    if col in off_results.columns
-                ]
 
-                st.dataframe(
-                    off_results[important_cols].sort_values(["Gene", "Score"], ascending=[True, False]),
-                    use_container_width=True,
-                    height=min(600, max(220, 28 * min(len(off_results), 15))),
-                )
+                    st.dataframe(
+                        off_results[important_cols].sort_values(["Gene", "Score"], ascending=[True, False]),
+                        use_container_width=True,
+                        height=min(600, max(220, 28 * min(len(off_results), 15))),
+                    )
 
-                filter_config = copy.deepcopy(full_config)
-                if "top_n_guides" not in filter_config:
-                    filter_config["top_n_guides"] = filter_config.get("filtering", {}).get("top_n_guides", 10)
+                    filter_config = copy.deepcopy(full_config)
+                    if "top_n_guides" not in filter_config:
+                        filter_config["top_n_guides"] = filter_config.get("filtering", {}).get("top_n_guides", 10)
 
-                filtered_guides, filter_stats = apply_filters(off_results.copy(), filter_config, logger=None)
+                    filtered_guides, filter_stats = apply_filters(off_results.copy(), filter_config, logger=None)
 
-                st.markdown("#### ✅ Adaptive filtering summary")
-                st.write(
-                    f"Selected {len(filtered_guides):,} guides after applying score/MM thresholds and adaptive MM0 tolerance."
-                )
-                st.json(filter_stats, expanded=False)
+                    st.markdown("#### ✅ Adaptive filtering summary")
+                    st.write(
+                        f"Selected {len(filtered_guides):,} guides after applying score/MM thresholds and adaptive MM0 tolerance."
+                    )
+                    st.json(filter_stats, expanded=False)
 
-                filtered_cols = [
-                    col for col in [
-                        "Gene",
-                        "Sequence",
-                        "Target" if "Target" in filtered_guides.columns else None,
-                        "Score",
-                        "MM0",
-                        "MM1",
-                        "MM2",
-                        "MM0_Transcripts",
-                        "MM0_Genes",
+                    filtered_cols = [
+                        col for col in [
+                            "Gene",
+                            "Sequence",
+                            "Target" if "Target" in filtered_guides.columns else None,
+                            "Score",
+                            "MM0",
+                            "MM1",
+                            "MM2",
+                            "MM0_Transcripts",
+                            "MM0_Genes",
+                        ]
+                        if col in filtered_guides.columns
                     ]
-                    if col in filtered_guides.columns
-                ]
 
-                st.dataframe(
-                    filtered_guides[filtered_cols].sort_values(["Gene", "Score"], ascending=[True, False]),
-                    use_container_width=True,
-                    height=min(500, max(200, 28 * min(len(filtered_guides), 10))),
-                )
+                    st.dataframe(
+                        filtered_guides[filtered_cols].sort_values(["Gene", "Score"], ascending=[True, False]),
+                        use_container_width=True,
+                        height=min(500, max(200, 28 * min(len(filtered_guides), 10))),
+                    )
 
-                raw_csv = off_results.sort_values(["Gene", "Score"], ascending=[True, False]).to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    label="📥 Download off-target results (CSV)",
-                    data=raw_csv,
-                    file_name=f"{Path(payload_name or 'tiger_guides').stem}_offtarget.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                )
+                    raw_csv = off_results.sort_values(["Gene", "Score"], ascending=[True, False]).to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        label="📥 Download off-target results (CSV)",
+                        data=raw_csv,
+                        file_name=f"{Path(payload_name or 'tiger_guides').stem}_offtarget.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                    )
 
-                filtered_csv = filtered_guides.sort_values(["Gene", "Score"], ascending=[True, False]).to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    label="📥 Download filtered guides (CSV)",
-                    data=filtered_csv,
-                    file_name=f"{Path(payload_name or 'tiger_guides').stem}_filtered.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                )
+                    filtered_csv = filtered_guides.sort_values(["Gene", "Score"], ascending=[True, False]).to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        label="📥 Download filtered guides (CSV)",
+                        data=filtered_csv,
+                        file_name=f"{Path(payload_name or 'tiger_guides').stem}_filtered.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                    )
 
 st.markdown("""
 ---
