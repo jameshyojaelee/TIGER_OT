@@ -44,6 +44,20 @@ def apply_filters(guides: pd.DataFrame, config: Dict, logger=None) -> Tuple[pd.D
     else:
         stats["adaptive_mm0"] = len(filtered)
 
+    # Deduplicate guides so the same sequence (and target, when present) is not
+    # returned multiple times just because it appeared at several positions in
+    # the input. Keep the best-scoring, lowest-mismatch copy.
+    dedup_keys = ["Gene", "Sequence"]
+    if "Target" in filtered.columns:
+        dedup_keys.append("Target")
+
+    filtered = (
+        filtered
+        .sort_values(["Gene", "Score", "MM0", "MM1", "MM2"], ascending=[True, False, True, True, True])
+        .drop_duplicates(subset=dedup_keys, keep="first")
+    )
+    stats["dedup_guides"] = len(filtered)
+
     top_n = config.get("top_n_guides", 10)
     if logger:
         logger.info("\n" + "=" * 60)

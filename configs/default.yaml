@@ -28,6 +28,7 @@ offtarget:
   max_mismatches: 5
   binary_path: "bin/offtarget_search"
   chunk_size: 1200  # Guides per batch (increase when running on high-memory nodes)
+  min_score_for_offtarget: 0.0  # Only run off-target on guides with TIGER score >= this (0.0 = disabled)
   
 # Filtering thresholds
 filtering:

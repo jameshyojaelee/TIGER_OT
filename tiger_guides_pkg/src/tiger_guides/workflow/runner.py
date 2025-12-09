@@ -213,6 +213,25 @@ class WorkflowRunner:
 
         guides_df = pd.read_csv(tiger_output)
 
+        offtarget_cfg = self.config.get("offtarget", {})
+        min_score = offtarget_cfg.get("min_score_for_offtarget", 0.0)
+
+        if "Score" in guides_df.columns and min_score > 0.0:
+            before = len(guides_df)
+            guides_df = guides_df[guides_df["Score"] >= min_score].copy()
+            self.logger.info(
+                f"Prefiltering guides for off-target search: "
+                f"{len(guides_df):,} / {before:,} with Score >= {min_score}"
+            )
+
+        if guides_df.empty:
+            self.logger.warning(
+                "No guides passed the off-target prefilter; skipping off-target search."
+            )
+            # Create an empty results file with the same columns to keep downstream steps happy
+            guides_df.to_csv(results_csv, index=False)
+            return results_csv
+
         offtarget_cfg = self.config["offtarget"]
         binary_cfg = Path(offtarget_cfg.get("binary_path", "bin/offtarget_search"))
         candidate_paths = []
